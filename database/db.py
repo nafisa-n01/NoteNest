@@ -50,7 +50,7 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS tasks(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title text not null,
-            priority text not null,
+            priority text,
             is_completed INTEGER DEFAULT 0,
             due_date date,
             user_id INTEGER REFERENCES users(id)   
