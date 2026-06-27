@@ -183,3 +183,74 @@
 
                     MDTextFieldHintText:
                         text: "Start writing..."
+
+#timerui
+<TimerScreen>:
+    md_bg_color: "#F7F1E6"
+
+    MDBoxLayout:
+        orientation: "vertical"
+        spacing: "25dp"
+        padding: "25dp"
+
+        Widget:
+            size_hint_y: .15
+
+        MDLabel:
+            text: "Pomodoro Timer"
+            halign: "center"
+            font_style: "Headline"
+
+        MDLabel:
+            id: session_label
+            text: "Focus Time"
+            halign: "center"
+            font_style: "Title"
+
+        MDLabel:
+            id: timer_label
+            text: "25:00"
+            halign: "center"
+            font_style: "Display"
+
+        Widget:
+
+        MDBoxLayout:
+            adaptive_height: True
+            spacing: "15dp"
+            size_hint_x: None
+            width: self.minimum_width
+            pos_hint: {"center_x": .5}
+
+            MDButton:
+                style: "filled"
+                on_release: root.start_timer()
+                MDButtonText:
+                    text: "Start"
+
+            MDButton:
+                style: "filled"
+                on_release: root.pause_timer()
+                MDButtonText:
+                    text: "Pause"
+
+            MDButton:
+                style: "filled"
+                on_release: root.reset_timer()
+                MDButtonText:
+                    text: "Reset"
+
+            MDButton:
+                style: "filled"
+                on_release:
+                    root.open_timer_dialog()
+                MDButtonText:
+                    text: "Set Timer"
+
+        Widget:
+            size_hint_y: .2
+
+
+
+
+
