@@ -2,9 +2,13 @@
   #its layout is defined in app.kv
 # screens/note_editor_screen.py
 
+# THE IMPORTS HERE (CHECK DISCORD)
+
 from kivymd.uix.screen import MDScreen
 
 class NoteEditorScreen(MDScreen):
+
+  # THE CONSTRUCTOR HERE
 
     current_note_id = None  # None = new note, a number = editing existing note
 
@@ -69,6 +73,11 @@ class NoteEditorScreen(MDScreen):
         print(f"Duplicated note: '{title} (copy)'")
         self.go_back()
 
+
+  
+# THE METHOD HERE
+
+  
     # ─── go back to home screen, reset everything ───
     def go_back(self):
         # Clear the fields for next time
