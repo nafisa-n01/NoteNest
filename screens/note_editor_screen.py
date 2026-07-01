@@ -75,7 +75,7 @@ class NoteEditorScreen(MDScreen):
 
 
   
-# THE METHOD HERE
+# THE METHOD HERE 
 
   
     # ─── go back to home screen, reset everything ───
