@@ -1,3 +1,65 @@
+<DashboardTile>:
+    size_hint: None, None
+    size: dp(150), dp(150)
+    radius: [16]
+
+    MDLabel:
+        id: tile_label                 # referenced in DashboardTile.apply_theme()
+        text: root.label
+        halign: "center"
+        theme_text_color: "Custom"     # required, or text_color below is ignored
+        text_color: 0, 0, 0, 1         # placeholder — overwritten by apply_theme()
+
+<HomeScreen>:
+    MDBoxLayout:
+        id: drawer_layout
+        orientation: "vertical"
+
+        # ── top toolbar: gear icon + app name ──
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(8)
+
+            MDIconButton:
+                id: menu_button
+                icon: "cog-outline"
+                theme_icon_color: "Custom"   # required, or icon_color is ignored
+                on_release: root.open_settings()
+
+            MDLabel:
+                id: drawer_title
+                text: "NoteNest"
+                theme_text_color: "Custom"
+
+        MDLabel:
+            id: home_label
+            text: "Welcome back"
+            halign: "center"
+            theme_text_color: "Custom"
+            size_hint_y: None
+            height: dp(40)
+
+        # ── the tile grid — HomeScreen.apply_theme() loops over these ──
+        MDBoxLayout:
+            id: tiles_row
+            spacing: dp(20)
+            padding: dp(20)
+            adaptive_height: True
+            pos_hint: {"center_x": 0.5}
+
+            DashboardTile:
+                label: "Notes"
+                target_screen: "notes"
+
+            DashboardTile:
+                label: "Pomodoro"
+                target_screen: "timer"
+
+            DashboardTile:
+                label: "Reminders"
+                target_screen: "calendar"
+
 # ── NoteCard ──────────────────────────────────────────────────
 <NoteCard>:
     orientation: "vertical"
@@ -31,9 +93,8 @@
         text_color: 0.54, 0.35, 0.17, 1
 
 
-# ── HomeScreen ────────────────────────────────────────────────
-<HomeScreen>:
-    name: "home"
+# ── NotesScreen ────────────────────────────────────────────────
+<NotesScreen>:
     md_bg_color: 0.97, 0.95, 0.90, 1
 
     FloatLayout:
@@ -51,6 +112,12 @@
                 spacing: "4dp"
                 md_bg_color: 0.92, 0.84, 0.66, 1
 
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_icon_color: "Custom"
+                    icon_color: 0.29, 0.20, 0.15, 1
+                    on_release: root.go_home()
+
                 MDLabel:
                     text: "NoteNest"
                     font_style: "Title"
@@ -63,13 +130,13 @@
                     icon: "sort-alphabetical-ascending"
                     theme_icon_color: "Custom"
                     icon_color: 0.29, 0.20, 0.15, 1
-                    on_release: app.root.get_screen('home').sort_notes('title')
+                    on_release: root.sort_notes('title')
 
                 MDIconButton:
                     icon: "sort-calendar-ascending"
                     theme_icon_color: "Custom"
                     icon_color: 0.29, 0.20, 0.15, 1
-                    on_release: app.root.get_screen('home').sort_notes('date')
+                    on_release: root.sort_notes('date')
 
             MDBoxLayout:
                 size_hint_y: None
@@ -79,7 +146,7 @@
 
                 MDTextField:
                     id: search_field
-                    on_text: app.root.get_screen('home').search_notes(self.text)
+                    on_text: root.search_notes(self.text)
 
                     MDTextFieldHintText:
                         text: "Search notes..."
@@ -101,8 +168,7 @@
             md_bg_color: 0.72, 0.79, 0.54, 1
             theme_icon_color: "Custom"
             icon_color: 0.29, 0.20, 0.15, 1
-            on_release: app.root.get_screen('home').open_note_editor()
-
+            on_release: root.open_note_editor()
 
 # ── NoteEditorScreen ──────────────────────────────────────────
 <NoteEditorScreen>:
@@ -183,4 +249,3 @@
 
                     MDTextFieldHintText:
                         text: "Start writing..."
-
