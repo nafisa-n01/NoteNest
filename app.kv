@@ -92,6 +92,29 @@
         theme_text_color: "Custom"
         text_color: 0.54, 0.35, 0.17, 1
 
+# ── AttachmentThumbnail ──────────────────────────────────────────
+<AttachmentThumbnail>:
+    size_hint: None, None
+    size: dp(72), dp(72)
+    radius: [8]
+    md_bg_color: 0.92, 0.84, 0.66, 1
+
+    Image:
+        source: root.image_path
+        size_hint: 1, 1
+        pos_hint: {"x": 0, "y": 0}
+        allow_stretch: True
+        keep_ratio: False
+
+    MDIconButton:
+        icon: "close-circle"
+        pos_hint: {"right": 1, "top": 1}
+        size_hint: None, None
+        size: dp(20), dp(20)
+        theme_icon_color: "Custom"
+        icon_color: 1, 1, 1, 1
+        on_release: root.request_remove()
+
 
 # ── NotesScreen ────────────────────────────────────────────────
 <NotesScreen>:
@@ -180,7 +203,6 @@
             icon_color: 0.29, 0.20, 0.15, 1
             on_release: root.open_note_editor()
 
-# ── NoteEditorScreen ──────────────────────────────────────────
 <NoteEditorScreen>:
     name: "note_editor"
     md_bg_color: 0.97, 0.95, 0.90, 1
@@ -190,7 +212,6 @@
         size_hint: 1, 1
         md_bg_color: 0.97, 0.95, 0.90, 1
 
-        # custom toolbar with explicit icon colors
         MDBoxLayout:
             size_hint_y: None
             height: "56dp"
@@ -211,6 +232,12 @@
                 theme_text_color: "Custom"
                 text_color: 0.29, 0.20, 0.15, 1
                 size_hint_x: 1
+
+            MDIconButton:
+                icon: "image-plus"
+                theme_icon_color: "Custom"
+                icon_color: 0.29, 0.20, 0.15, 1
+                on_release: app.root.get_screen('note_editor').pick_image()
 
             MDIconButton:
                 icon: "content-copy"
@@ -242,20 +269,41 @@
                 MDTextFieldHintText:
                     text: "Title"
 
+        # ── photo previews — height is set to 0 in Python when there are
+        #    no attachments, instead of always leaving an empty gap here ──
         ScrollView:
-            size_hint: 1, 1
+            id: attachments_scroll
+            size_hint_y: None
+            height: 0
+            do_scroll_x: True
+            do_scroll_y: False
 
             MDBoxLayout:
+                id: attachments_row
+                orientation: "horizontal"
+                spacing: "8dp"
                 padding: "16dp", "8dp"
+                adaptive_width: True
                 size_hint_y: None
-                height: self.minimum_height
-                md_bg_color: 0.97, 0.95, 0.90, 1
+                height: "72dp"
 
-                MDTextField:
-                    id: content_field
-                    multiline: True
-                    size_hint_y: None
-                    height: max(self.minimum_height, dp(400))
+        # ── note content — the ONLY flexible-height element in this
+        #    screen, so it naturally fills whatever space is left.
+        #    No ScrollView wrapper needed: multiline fields already
+        #    scroll their own overflow internally. ──
+        MDCard:
+            orientation: "vertical"
+            size_hint: 1, 1
+            padding: "20dp"
+            radius: [20, 20, 20, 20]
+            elevation: 1
+            md_bg_color: 1, 0.98, 0.93, 1
 
-                    MDTextFieldHintText:
-                        text: "Start writing..."
+            MDTextField:
+                id: content_field
+                multiline: True
+                size_hint: 1, 1
+                font_size: "16sp"
+
+                MDTextFieldHintText:
+                    text: "Start writing..."
