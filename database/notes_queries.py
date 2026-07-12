@@ -7,6 +7,7 @@ def create_notes(notebook_id, title, content, category_id=None, is_pinned=0, is_
         INSERT INTO notes (notebook_id, title, content, category_id, is_pinned, is_archived)
         VALUES (?, ?, ?, ?, ?, ?)
     ''', (notebook_id, title, content, category_id, is_pinned, is_archived))
+    note_id=cursor.lastrowid
     conn.commit()
     note_id=cursor.lastrowid
     conn.close()
