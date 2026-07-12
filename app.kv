@@ -41,12 +41,12 @@
             size: dp(54), dp(54)
             pos_hint: {"center_y": 0.5}
             on_release: root.on_release()
+
 <HomeScreen>:
     MDBoxLayout:
         id: drawer_layout
         orientation: "vertical"
 
-        # ── top toolbar: gear icon + app name ──
         MDBoxLayout:
             size_hint_y: None
             height: dp(56)
@@ -79,7 +79,7 @@
 
                 MDLabel:
                     id: home_label
-                    text: "Let’s get you started for the day"
+                    text: "Let's get you started for the day"
                     halign: "center"
                     theme_text_color: "Custom"
                     font_style: "Title"
@@ -176,7 +176,6 @@
         icon_color: 1, 1, 1, 1
         on_release: root.request_remove()
 
-
 # ── NotesScreen ────────────────────────────────────────────────
 <NotesScreen>:
     md_bg_color: 0.97, 0.95, 0.90, 1
@@ -188,8 +187,6 @@
             size_hint: 1, 1
             md_bg_color: 0.97, 0.95, 0.90, 1
 
-            # custom toolbar — MDFloatLayout lets the title truly center
-            # on the bar itself, regardless of how many icons sit on each side
             MDFloatLayout:
                 size_hint_y: None
                 height: "56dp"
@@ -349,7 +346,6 @@
                 orientation: "vertical"
                 size_hint: 1, 1
 
-                # edit mode: plain text, image markers visible as text
                 MDTextField:
                     id: content_field
                     multiline: True
@@ -359,5 +355,4 @@
 
                     MDTextFieldHintText:
                         text: "Start writing..."
-
-                
+                        
