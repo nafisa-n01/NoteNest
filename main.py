@@ -7,10 +7,12 @@ from screens.note_editor_screen import NoteEditorScreen
 from screens.settings_screen import SettingsScreen
 from screens.timer_screen import TimerScreen
 from screens.calendar_screen import CalendarScreen # Amattullah's update
+from database.db import create_tables # Database initialization
 
 
 class NoteNestApp(MDApp):
     def build(self):
+        create_tables() # Initializes database on app startup, Creates all the tables if they don'y exist yet
         self.title = "NoteNest"
         Builder.load_file("app.kv")
         Builder.load_file("settings_screen.kv")
