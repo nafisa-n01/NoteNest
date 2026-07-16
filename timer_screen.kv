@@ -1,52 +1,143 @@
 # timer_screen.kv
-# Layout for TimerScreen (Pomodoro). timer_label and session_label
-# are updated every 0.2s by refresh_ui() in timer_screen.py.
+# Modern Pomodoro UI
+# Colors are still applied from timer_screen.py using ThemeManager.
+# No hardcoded colors are used here.
 
-<TimerScreen>:
+<TimerScreen>
+
     MDBoxLayout:
         orientation: "vertical"
-        padding: dp(24)
-        spacing: dp(24)
-        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+        padding: dp(20)
+        spacing: dp(16)
+
+        # =====================================================
+        # Top Bar
+        # =====================================================
+
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(52)
+
+            MDIconButton:
+                id: back_button
+                icon: "arrow-left"
+                theme_icon_color: "Custom"
+                on_release: root.go_back()
+
+            Widget:
+
+        # =====================================================
+        # Title
+        # =====================================================
 
         MDLabel:
-            id: session_label
-            text: "Focus Time"
+            id: header_label
+            text: "Focus Timer"
             halign: "center"
-            font_style: "Title"
+            theme_text_color: "Custom"
+            font_style: "Headline"
             role: "medium"
+            adaptive_height: True
+
+        MDLabel:
+            id: subtitle_label
+            text: "Stay focused. One session at a time."
+            halign: "center"
+            theme_text_color: "Custom"
+            font_style: "Body"
+            role: "medium"
+            adaptive_height: True
+
+        Widget:
+            size_hint_y: None
+            height: dp(10)
+
+        # =====================================================
+        # Hourglass Placeholder
+        # (Python will animate this later)
+        # =====================================================
+
+        AnchorLayout:
+            size_hint_y: None
+            height: dp(140)
+
+            MDIcon:
+                id: hourglass_icon
+                icon: "hourglass"
+                theme_icon_color: "Custom"
+                icon_size: "88sp"
+
+        Widget:
+            size_hint_y: None
+            height: dp(10)
+
+        # =====================================================
+        # Timer
+        # =====================================================
 
         MDLabel:
             id: timer_label
             text: "25:00"
             halign: "center"
+            theme_text_color: "Custom"
+            font_style: "Display"
+            role: "large"
+            font_size: "58sp"
+            adaptive_height: True
+
+        MDLabel:
+            id: session_label
+            text: "Focus Time"
+            halign: "center"
+            theme_text_color: "Custom"
             font_style: "Title"
             role: "medium"
-            font_size: "48sp"   # bumped up manually, "Display" role isn't confirmed to exist in your KivyMD build
+            adaptive_height: True
+
+        MDLabel:
+            id: session_sub_label
+            text: "25 minute session"
+            halign: "center"
+            theme_text_color: "Custom"
+            font_style: "Body"
+            role: "medium"
+            adaptive_height: True
+
+        Widget:
+
+        # =====================================================
+        # Controls
+        # =====================================================
 
         MDBoxLayout:
-            spacing: dp(16)
+            id: controls_row
+            adaptive_width: True
             adaptive_height: True
+            spacing: dp(36)
             pos_hint: {"center_x": 0.5}
-
-            MDButton:
-                style: "filled"
-                on_release: root.start_timer()
-                MDButtonText:
-                    text: "Start"
-
-            MDButton:
-                style: "filled"
-                on_release: root.pause_timer()
-                MDButtonText:
-                    text: "Pause"
-
-            MDButton:
-                style: "filled"
-                on_release: root.reset_timer()
-                MDButtonText:
-                    text: "Reset"
+            padding: 0, dp(8)
 
             MDIconButton:
+                id: reset_button
+                icon: "restart"
+                theme_icon_color: "Custom"
+                icon_size: "30sp"
+                on_release: root.reset_timer()
+
+            MDIconButton:
+                id: toggle_button
+                icon: "play"
+                theme_icon_color: "Custom"
+                icon_size: "52sp"
+                on_release: root.toggle_timer()
+
+            MDIconButton:
+                id: settings_button
                 icon: "cog-outline"
+                theme_icon_color: "Custom"
+                icon_size: "30sp"
                 on_release: root.open_timer_dialog()
+
+        Widget:
+            size_hint_y: None
+            height: dp(12)

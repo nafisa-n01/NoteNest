@@ -6,13 +6,14 @@ from kivymd.uix.screen import MDScreen
 
 from theme.theme_manager import theme_manager
 from theme.palettes import BACKGROUND, TEXT_PRIMARY, TEXT_SECONDARY
+from theme.themed_screen import ThemedScreenMixin
 
 # Importing DashboardTile registers it with Kivy's Factory.
 # Without this, app.kv may throw "Unknown class <DashboardTile>".
 from widgets.dashboard_tile import DashboardTile
 
 
-class HomeScreen(MDScreen):
+class HomeScreen(ThemedScreenMixin,MDScreen):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -21,35 +22,24 @@ class HomeScreen(MDScreen):
         # We need this because self.ids is not ready inside __init__.
         self.bind(on_kv_post=lambda *x: self.apply_theme())
 
+    THEME_MAP = {
+        "self":          ("md_bg_color", BACKGROUND),
+        "drawer_layout": ("md_bg_color", BACKGROUND),
+        "drawer_title":  ("text_color", TEXT_PRIMARY),
+        "menu_button":   ("icon_color", TEXT_PRIMARY),
+        "home_label":    ("text_color", TEXT_PRIMARY),
+        "home_subtitle": ("text_color", TEXT_SECONDARY),
+    }
+
     def on_pre_enter(self, *args):
-        """
-        Runs every time the Home screen becomes visible.
-        This helps theme changes show immediately.
-        """
-
         self.apply_theme()
-
-    def apply_theme(self):
-        """
-        Apply the selected NoteNest theme to the Home screen.
-        """
-
-        self.md_bg_color = theme_manager.get_color(BACKGROUND)
-
-        self.ids.drawer_layout.md_bg_color = theme_manager.get_color(BACKGROUND)
-
-        self.ids.drawer_title.text_color = theme_manager.get_color(TEXT_PRIMARY)
-        self.ids.menu_button.icon_color = theme_manager.get_color(TEXT_PRIMARY)
-
-        self.ids.home_label.text_color = theme_manager.get_color(TEXT_PRIMARY)
-
-        if "home_subtitle" in self.ids:
-            self.ids.home_subtitle.text_color = theme_manager.get_color(TEXT_SECONDARY)
-
-        # Tiles do not have separate ids, so we loop over the tile container.
+    
+    #new method added
+    def on_theme_applied(self):
         for tile in self.ids.tiles_row.children:
             if hasattr(tile, "apply_theme"):
                 tile.apply_theme()
+
 
     def open_settings(self):
         """
