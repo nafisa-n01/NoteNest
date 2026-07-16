@@ -3,7 +3,7 @@
 
 from kivymd.uix.screen import MDScreen
 from widgets.note_card import NoteCard
-from database.notes_queries import get_all_notes, search_notes as db_search_notes, archive_notes
+from database.notes_queries import get_all_notes, search_notes as db_search_notes, archive_notes, pin_notes
 
 # Week 3 TEMP: every note needs a notebook_id, but there's no notebook
 # creation/selection screen yet. Using 1 as a placeholder until Tabshira
@@ -85,4 +85,11 @@ class NotesScreen(MDScreen):
     def archive_note(self, note_id):
         # is_archived column takes 0 or 1, not True/False
         archive_notes(note_id, 1)
+        self.load_notes()
+
+    def toggle_pin_note(self, note_id, is_pinned):
+        # is_pinned here is the CURRENT state, passed up from the card
+        # before it changes -- flip it and save the opposite value.
+        new_value = 0 if is_pinned else 1
+        pin_notes(note_id, new_value)
         self.load_notes()

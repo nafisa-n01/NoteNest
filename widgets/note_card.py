@@ -13,12 +13,25 @@ class NoteCard(MDCard):
 
     # track that the touch started on this card
     def on_touch_down(self, touch):
+        # If the touch landed on the pin icon, let it handle itself --
+        # don't record this as "the card was pressed," or the pin
+        # button's own tap-to-toggle would also open the note editor.
+        if "pin_icon" in self.ids and self.ids.pin_icon.collide_point(*touch.pos):
+            return super().on_touch_down(touch)
+
         if self.collide_point(*touch.pos):
             self._touch_mine = True
         return super().on_touch_down(touch)
 
     # only open note if the tap both started and ended on this card
     def on_touch_up(self, touch):
+        # Same exclusion as above -- if this touch is over the pin icon,
+        # don't treat it as "open the note," just let the button's own
+        # on_release logic run normally.
+        if "pin_icon" in self.ids and self.ids.pin_icon.collide_point(*touch.pos):
+            self._touch_mine = False
+            return super().on_touch_up(touch)
+
         if self.collide_point(*touch.pos) and getattr(self, '_touch_mine', False):
             self._touch_mine = False
             from kivymd.app import MDApp
@@ -29,3 +42,11 @@ class NoteCard(MDCard):
             return True
         self._touch_mine = False
         return super().on_touch_up(touch)
+
+    # called when the pin icon is tapped -- hands off to the notes
+    # screen, which owns the actual database call and list refresh
+    def toggle_pin(self):
+        from kivymd.app import MDApp
+        app = MDApp.get_running_app()
+        notes_screen = app.root.get_screen("notes")
+        notes_screen.toggle_pin_note(self.note_id, self.is_pinned)
