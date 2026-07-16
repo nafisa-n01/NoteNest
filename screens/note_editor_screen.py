@@ -96,21 +96,12 @@ class NoteEditorScreen(MDScreen):
         # fully applied and self.ids is populated -- guaranteed to run,
         # unlike binding to on_kv_post from inside __init__.
         super().on_kv_post(base_widget)
-        print("Attempting to bind selection tracking...")
         self.ids.content_field.bind(selection_text=self._track_selection)
-        print("Bind call completed without error")
-
-    def _bind_selection_tracking(self):
-        print("Attempting to bind selection tracking...")
-        self.ids.content_field.bind(selection_text=self._track_selection)
-        print("Bind call completed without error")
 
     def _track_selection(self, field, value):
-        print("_track_selection fired! value:", repr(value))
         if value:
             start, end = sorted((field.selection_from, field.selection_to))
             self._last_selection = (value, start, end)
-            print("Recorded:", self._last_selection)
 
     def on_enter(self):
         self.is_preview = False
@@ -194,30 +185,55 @@ class NoteEditorScreen(MDScreen):
     def _wrap_selection(self, marker):
         field = self.ids.content_field
 
-        # TEMP DEBUG — remove after we figure this out
-        print("field type:", type(field))
-        print("selection_text:", repr(getattr(field, "selection_text", "MISSING")))
-        print("selection_from/to:", getattr(field, "selection_from", "MISSING"), getattr(field, "selection_to", "MISSING"))
-        print("last_selection recorded:", self._last_selection)
+        if not self._last_selection:
+            # Nothing selected -- just drop an empty marker pair at the
+            # cursor and place the cursor between them, like before.
+            field.insert_text(marker + marker)
+            index = field.cursor_index() - len(marker)
+            field.cursor = field.get_cursor_from_index(index)
+            return
 
-        if self._last_selection:
-            selected, start, end = self._last_selection
-            # Confirm the text at that position still matches what was
-            # actually selected, in case something changed since -- guards
-            # against wrapping the wrong text if it's gone stale.
-            if field.text[start:end] == selected:
-                field.text = field.text[:start] + marker + selected + marker + field.text[end:]
-                field.cursor = field.get_cursor_from_index(end + 2 * len(marker))
-                self._last_selection = None
-                return
+        selected, start, end = self._last_selection
+        text = field.text
+
+        if text[start:end] != selected:
+            # Selection went stale (text changed since it was recorded) --
+            # fall back to inserting an empty marker pair instead of risking
+            # wrapping the wrong text.
             self._last_selection = None
+            field.insert_text(marker + marker)
+            index = field.cursor_index() - len(marker)
+            field.cursor = field.get_cursor_from_index(index)
+            return
 
-        # No usable selection on record -- insert an empty marker pair at
-        # the cursor, with the cursor placed between the two halves so
-        # typing lands inside them.
-        field.insert_text(marker + marker)
-        index = field.cursor_index() - len(marker)
-        field.cursor = field.get_cursor_from_index(index)
+        m_len = len(marker)
+
+        # Case 1: the selection ITSELF includes the markers, e.g. the user
+        # dragged over "**bold**" including the asterisks. Strip them.
+        if selected.startswith(marker) and selected.endswith(marker) and len(selected) >= 2 * m_len:
+            inner = selected[m_len:-m_len]
+            field.text = text[:start] + inner + text[end:]
+            field.cursor = field.get_cursor_from_index(start + len(inner))
+            self._last_selection = None
+            return
+
+        # Case 2: the markers sit just OUTSIDE the selection, e.g. the user
+        # only selected "bold" but "**" is right before and after it. This is
+        # the natural way people reselect text to undo formatting. Strip the
+        # markers that are already there instead of adding new ones.
+        before = text[max(0, start - m_len):start]
+        after = text[end:end + m_len]
+        if before == marker and after == marker:
+            field.text = text[:start - m_len] + selected + text[end + m_len:]
+            field.cursor = field.get_cursor_from_index(start - m_len + len(selected))
+            self._last_selection = None
+            return
+
+        # Neither case matched -- this selection isn't already wrapped in
+        # this marker, so wrap it normally (this is the original behavior).
+        field.text = text[:start] + marker + selected + marker + text[end:]
+        field.cursor = field.get_cursor_from_index(end + 2 * m_len)
+        self._last_selection = None
 
     def make_bold(self):
         self._wrap_selection("**")
