@@ -25,7 +25,12 @@ DEFAULT_NOTEBOOK_ID = 1
 # Photos get copied here instead of staying wherever they were picked from,
 # so a note doesn't break if the original file gets moved or deleted, and
 # so notes work the same on a different machine.
-ATTACHMENTS_DIR = "note_attachments"
+# Anchored to this file's own location instead of the current working
+# directory, since the working directory isn't reliable here (the same
+# issue that broke the database path when the file picker changed it).
+_SCREENS_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(_SCREENS_DIR)
+ATTACHMENTS_DIR = os.path.join(_PROJECT_ROOT, "note_attachments")
 
 # Matches an inline image marker in note content, e.g. {{img:note_attachments/abc123.jpg}}
 IMAGE_TOKEN_PATTERN = re.compile(r"\{\{img:(.*?)\}\}")
@@ -80,20 +85,32 @@ class NoteEditorScreen(MDScreen):
         self._preview_scroll = ScrollView(size_hint=(1, 1), do_scroll_x=False)
         self._preview_scroll.add_widget(self._preview_content)
 
-        # Holds the most recent non-empty selection as (text, start, end).
-        # Needed because tapping a toolbar button moves focus away from the
-        # text field, which clears the live selection before our code runs --
-        # so we track it continuously instead of reading it after the fact.
         self._last_selection = None
-        self.bind(on_kv_post=lambda *x: self._bind_selection_tracking())
+        # NOTE: deliberately not binding on_kv_post here. on_kv_post actually
+        # fires DURING super().__init__() above, before this line would even
+        # run -- so a bind placed here always misses it. Overriding the
+        # method below is the correct way to hook into this event.
+
+    def on_kv_post(self, base_widget):
+        # Kivy calls this automatically once this screen's KV rule has been
+        # fully applied and self.ids is populated -- guaranteed to run,
+        # unlike binding to on_kv_post from inside __init__.
+        super().on_kv_post(base_widget)
+        print("Attempting to bind selection tracking...")
+        self.ids.content_field.bind(selection_text=self._track_selection)
+        print("Bind call completed without error")
 
     def _bind_selection_tracking(self):
+        print("Attempting to bind selection tracking...")
         self.ids.content_field.bind(selection_text=self._track_selection)
+        print("Bind call completed without error")
 
     def _track_selection(self, field, value):
-        if value:  # ignore the empty-string update that fires when selection clears
+        print("_track_selection fired! value:", repr(value))
+        if value:
             start, end = sorted((field.selection_from, field.selection_to))
             self._last_selection = (value, start, end)
+            print("Recorded:", self._last_selection)
 
     def on_enter(self):
         self.is_preview = False
@@ -176,6 +193,12 @@ class NoteEditorScreen(MDScreen):
     # ─── bold / italic / underline / highlight ───
     def _wrap_selection(self, marker):
         field = self.ids.content_field
+
+        # TEMP DEBUG — remove after we figure this out
+        print("field type:", type(field))
+        print("selection_text:", repr(getattr(field, "selection_text", "MISSING")))
+        print("selection_from/to:", getattr(field, "selection_from", "MISSING"), getattr(field, "selection_to", "MISSING"))
+        print("last_selection recorded:", self._last_selection)
 
         if self._last_selection:
             selected, start, end = self._last_selection
