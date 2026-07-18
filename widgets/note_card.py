@@ -10,6 +10,7 @@ class NoteCard(MDCard):
     preview = StringProperty("")
     note_id = NumericProperty(0)
     is_pinned = BooleanProperty(False)
+    last_edited = StringProperty("")
 
     # track that the touch started on this card
     def on_touch_down(self, touch):

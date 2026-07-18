@@ -4,6 +4,7 @@
 from kivymd.uix.screen import MDScreen
 from widgets.note_card import NoteCard
 from database.notes_queries import get_all_notes, search_notes as db_search_notes, archive_notes, pin_notes
+from datetime import datetime
 
 from theme.theme_manager import theme_manager
 from theme.themed_screen import ThemedScreenMixin
@@ -13,6 +14,19 @@ from theme.palettes import BACKGROUND, TEXT_PRIMARY, CARD_SECONDARY, ACCENT
 # creation/selection screen yet. Using 1 as a placeholder until Tabshira
 # confirms how notebooks get created (one default per user? a picker?).
 DEFAULT_NOTEBOOK_ID = 1
+
+def _format_last_edited(updated_at):
+    # SQLite's CURRENT_TIMESTAMP is stored as "YYYY-MM-DD HH:MM:SS" --
+    # parse it into something more readable for the note card.
+    if not updated_at:
+        return ""
+    try:
+        dt = datetime.strptime(updated_at, "%Y-%m-%d %H:%M:%S")
+    except (ValueError, TypeError):
+        # If the stored format is ever different than expected, show the
+        # raw value instead of crashing the notes list.
+        return f"Edited {updated_at}"
+    return f"Edited {dt.strftime('%b %d, %Y · %I:%M %p')}"
 
                     #NEWLY ADDED PARAMETER
 class NotesScreen(ThemedScreenMixin,MDScreen):
@@ -74,6 +88,7 @@ class NotesScreen(ThemedScreenMixin,MDScreen):
                 preview=note[3] or "",   # content (guard against None)
                 note_id=note[0],         # id
                 is_pinned=bool(note[4]),
+                last_edited=_format_last_edited(note[7]),  # updated_at
             )
             self.ids.notes_list.add_widget(card)
             # Theme this card immediately with whatever the current
@@ -101,6 +116,7 @@ class NotesScreen(ThemedScreenMixin,MDScreen):
                 preview=note[3] or "",
                 note_id=note[0],
                 is_pinned=bool(note[4]),
+                last_edited=_format_last_edited(note[7]),  # updated_at
             )
             self.ids.notes_list.add_widget(card)
             if hasattr(card, "apply_theme"):

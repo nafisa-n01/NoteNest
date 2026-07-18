@@ -12,6 +12,7 @@ from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivymd.uix.screen import MDScreen
 from plyer import filechooser
+from kivy.properties import BooleanProperty
 
 from database.notes_queries import (
     get_notes_by_id, create_notes, update_notes, delete_notes, duplicate_notes,
@@ -117,6 +118,7 @@ def convert_formatting_to_markup(text):
 class NoteEditorScreen(ThemedScreenMixin,MDScreen):
     current_note_id = None
     is_preview = False
+    show_search = BooleanProperty(False)
 
     THEME_MAP = {
         "self":                ("md_bg_color", BACKGROUND),
@@ -166,6 +168,10 @@ class NoteEditorScreen(ThemedScreenMixin,MDScreen):
         # True while WE are the ones changing field.text (e.g. during an
         # undo/redo itself) -- stops that change from being recorded as
         # a brand-new edit, which would corrupt the history.
+        # In-note search state: list of (start, end) match positions,
+        # and which match is currently selected/highlighted.
+        self._search_matches = []
+        self._search_match_index = -1
         self._suppress_history = False
         # Holds the pending "user paused typing" timer so it can be
         # cancelled/restarted on every keystroke.
@@ -275,6 +281,90 @@ class NoteEditorScreen(ThemedScreenMixin,MDScreen):
         word_count = len(text.split()) if text.strip() else 0
         if "word_count_label" in self.ids:
             self.ids.word_count_label.text = f"{word_count} words · {char_count} chars"
+    
+    def toggle_search(self):
+        # Shows/hides the search bar. If the user opens search while in
+        # Preview mode, switch to Edit mode first -- match highlighting
+        # happens on content_field, which isn't visible during Preview.
+        self.show_search = not self.show_search
+        field = self.ids.content_field
+
+        if self.show_search:
+            if self.is_preview:
+                self.is_preview = False
+                self.show_edit_mode()
+            self.ids.search_query_field.text = ""
+            self._search_matches = []
+            self._search_match_index = -1
+            self._update_search_match_label()
+            # Give focus to the search box so the user can type right
+            # away, scheduled for next frame so the widget is ready.
+            Clock.schedule_once(lambda dt: setattr(self.ids.search_query_field, "focus", True))
+        else:
+            field.cancel_selection()
+
+    def _find_all_matches(self, text, query):
+        # Case-insensitive substring search, returns a list of
+        # (start_index, end_index) tuples for every match found.
+        matches = []
+        if not query:
+            return matches
+        lower_text = text.lower()
+        lower_query = query.lower()
+        start = 0
+        while True:
+            index = lower_text.find(lower_query, start)
+            if index == -1:
+                break
+            matches.append((index, index + len(query)))
+            start = index + 1
+        return matches
+
+    def on_search_text_change(self, query):
+        # Recomputes matches live as the user types in the search box.
+        field = self.ids.content_field
+        self._search_matches = self._find_all_matches(field.text, query)
+        self._search_match_index = 0 if self._search_matches else -1
+        self._update_search_match_label()
+
+        if self._search_matches:
+            self._jump_to_match(self._search_match_index)
+        else:
+            field.cancel_selection()
+
+    def search_next(self):
+        if not self._search_matches:
+            return
+        # Wraps back to the first match after the last one.
+        self._search_match_index = (self._search_match_index + 1) % len(self._search_matches)
+        self._jump_to_match(self._search_match_index)
+        self._update_search_match_label()
+
+    def search_prev(self):
+        if not self._search_matches:
+            return
+        # Wraps back to the last match before the first one.
+        self._search_match_index = (self._search_match_index - 1) % len(self._search_matches)
+        self._jump_to_match(self._search_match_index)
+        self._update_search_match_label()
+
+    def _jump_to_match(self, index):
+        # Moves the cursor to the match (which scrolls it into view,
+        # the same trick already used in _wrap_selection), then selects
+        # it so it shows highlighted using the text box's normal
+        # selection color.
+        field = self.ids.content_field
+        start, end = self._search_matches[index]
+        field.cursor = field.get_cursor_from_index(start)
+        field.select_text(start, end)
+
+    def _update_search_match_label(self):
+        if "search_match_label" not in self.ids:
+            return
+        if not self._search_matches:
+            self.ids.search_match_label.text = "0/0"
+        else:
+            self.ids.search_match_label.text = f"{self._search_match_index + 1}/{len(self._search_matches)}"
 
     def on_enter(self):
         self.is_preview = False
@@ -294,6 +384,13 @@ class NoteEditorScreen(ThemedScreenMixin,MDScreen):
             self._undo_stack = [field.text]
             self._redo_stack = []
             self._update_word_count(field.text)
+            # Close and reset in-note search too, so a leftover query typed
+            # for a previous note doesn't carry over into this one.
+            self.show_search = False
+            self._search_matches = []
+            self._search_match_index = -1
+            if "search_query_field" in self.ids:
+                self.ids.search_query_field.text = ""
         self.show_edit_mode()
 
     def load_note(self, note_id):
@@ -325,6 +422,13 @@ class NoteEditorScreen(ThemedScreenMixin,MDScreen):
             self._undo_stack = [field.text]
             self._redo_stack = []
             self._update_word_count(field.text)
+            # Close and reset in-note search too, so a leftover query typed
+            # for a previous note doesn't carry over into this one.
+            self.show_search = False
+            self._search_matches = []
+            self._search_match_index = -1
+            if "search_query_field" in self.ids:
+                self.ids.search_query_field.text = ""
 
     # ─── image picking, now with local copying ───
     def pick_image(self):
