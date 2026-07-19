@@ -18,6 +18,7 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDButton, MDButtonText
 from kivy.core.text import LabelBase
+import trash_store
 
 from database.notes_queries import (
     get_notes_by_id, create_notes, update_notes, delete_notes, duplicate_notes,
@@ -858,6 +859,19 @@ class NoteEditorScreen(ThemedScreenMixin,MDScreen):
 
     def _confirm_delete(self):
         self._delete_modal.dismiss()
+
+        # Snapshot the note into local trash before permanently
+        # deleting it, so it can be recovered from "Recently Deleted"
+        # if this was a mistake.
+        note = get_notes_by_id(self.current_note_id)
+        if note is not None:
+            trash_store.add_to_trash(
+                notebook_id=note[1],
+                title=note[2],
+                content=note[3] or "",
+                category_id=note[8],
+            )
+
         delete_notes(self.current_note_id)
         self.go_back()
 

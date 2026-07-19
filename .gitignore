@@ -7,3 +7,4 @@ bin/
 MyApp.db 
 note_attachments/
 exported_notes/
+trash.json

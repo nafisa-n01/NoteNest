@@ -113,6 +113,8 @@ class NotesScreen(ThemedScreenMixin,MDScreen):
     def go_home(self):
         self.manager.current = "home"
 
+    def open_recently_deleted(self):
+        self.manager.current = "recently_deleted"
 
     def on_enter(self):
         self.load_notes()

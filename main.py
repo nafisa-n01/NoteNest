@@ -8,6 +8,7 @@ from screens.settings_screen import SettingsScreen
 from screens.timer_screen import TimerScreen
 from screens.calendar_screen import CalendarScreen 
 from database.db import create_tables # Database initialization
+from screens.recently_deleted_screen import RecentlyDeletedScreen
 
 
 class NoteNestApp(MDApp):
@@ -22,6 +23,7 @@ class NoteNestApp(MDApp):
         sm.add_widget(HomeScreen(name="home"))
         sm.add_widget(NotesScreen(name="notes"))
         sm.add_widget(NoteEditorScreen(name="note_editor"))
+        sm.add_widget(RecentlyDeletedScreen(name="recently_deleted"))
         sm.add_widget(SettingsScreen(name="settings"))
         sm.add_widget(TimerScreen(name="timer"))
         sm.add_widget(CalendarScreen(name="calendar"))
