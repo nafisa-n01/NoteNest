@@ -9,6 +9,15 @@ from screens.timer_screen import TimerScreen
 from screens.calendar_screen import CalendarScreen 
 from database.db import create_tables # Database initialization
 from screens.recently_deleted_screen import RecentlyDeletedScreen
+from kivy.core.window import Window
+
+# Tells Kivy to automatically resize the app's visible area so whatever
+# text field currently has focus stays visible above the on-screen
+# keyboard, instead of the keyboard covering it. Does nothing on
+# desktop (there's no real on-screen keyboard here to trigger it) --
+# this only takes effect once running on an actual Android device or
+# emulator.
+Window.softinput_mode = "below_target"
 
 
 class NoteNestApp(MDApp):
