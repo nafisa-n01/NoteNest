@@ -12,6 +12,8 @@ from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.properties import BooleanProperty
 from kivymd.uix.screen import MDScreen
+from kivy.core.window import Window
+from screens.editor.formatting_toolbar import FormattingToolbar  # noqa: F401 -- registers the widget class with KV before app.kv loads it, same fix as the earlier DashboardTile "Unknown class" issue
 
 from database.notes_queries import get_notes_by_id, create_notes, update_notes, duplicate_notes
 
@@ -33,6 +35,10 @@ from screens.editor.link_mixin import HyperlinkMixin
 from screens.editor.export_mixin import ExportMixin
 from screens.editor.delete_mixin import DeleteConfirmationMixin
 
+# Material Design's standard "compact vs medium" width breakpoint --
+# below this, treat the device as a phone; at or above, a tablet.
+COMPACT_WIDTH_BREAKPOINT = dp(600)
+
 
 class NoteEditorScreen(
     ThemedScreenMixin,
@@ -48,6 +54,7 @@ class NoteEditorScreen(
     current_note_id = None
     is_preview = False
     show_search = BooleanProperty(False)
+    is_compact = BooleanProperty(False)
 
     THEME_MAP = {
         "self":                ("md_bg_color", BACKGROUND),
@@ -106,6 +113,30 @@ class NoteEditorScreen(
         super().on_kv_post(base_widget)
         self.ids.content_field.bind(selection_text=self._track_selection)
         self.ids.content_field.bind(text=self._on_content_text_changed)
+        # Watches for the window being resized (or, on a real device,
+        # rotated) -- moves the toolbar between docked/floating
+        # placement whenever that crosses the compact-width breakpoint.
+        Window.bind(width=self._on_window_width_changed)
+        self._apply_toolbar_placement()
+
+    def _on_window_width_changed(self, instance, width):
+        self._apply_toolbar_placement()
+
+    def _apply_toolbar_placement(self):
+        compact = Window.width < COMPACT_WIDTH_BREAKPOINT
+        if compact == self.is_compact and self.ids.formatting_toolbar.parent is not None:
+            # No actual change -- avoid needless reparenting on every
+            # tiny resize event.
+            return
+        self.is_compact = compact
+
+        toolbar = self.ids.formatting_toolbar
+        target = self.ids.toolbar_bottom_slot if compact else self.ids.toolbar_top_slot
+
+        if toolbar.parent is not None:
+            toolbar.parent.remove_widget(toolbar)
+        target.add_widget(toolbar)
+        toolbar.is_compact = compact
 
     def on_theme_applied(self):
         field = self.ids.get("content_field")

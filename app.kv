@@ -373,58 +373,75 @@
                 shorten_from: "right"
 
             # ── "view" tools: search, insert image, preview toggle ──
-            MDIconButton:
-                id: search_button
-                icon: "magnify"
-                theme_icon_color: "Custom"
-                on_release: app.root.get_screen('note_editor').toggle_search()
+            # ── icon cluster: scrolls horizontally instead of being
+            #    silently clipped when there's not enough width for
+            #    every icon (phones). On wide screens where everything
+            #    already fits, this ScrollView has nothing to scroll
+            #    and looks/behaves exactly like a normal row. ──
+            ScrollView:
+                id: top_bar_icons_scroll
+                size_hint: 1, 1
+                do_scroll_x: True
+                do_scroll_y: False
+                bar_width: dp(2)
 
-            MDIconButton:
-                id: image_button
-                icon: "image-plus"
-                theme_icon_color: "Custom"
-                on_release: app.root.get_screen('note_editor').pick_image()
+                MDBoxLayout:
+                    id: top_bar_icons
+                    orientation: "horizontal"
+                    size_hint_x: None
+                    size_hint_y: 1
+                    width: self.minimum_width
+                    spacing: "2dp"
 
-            MDIconButton:
-                id: preview_button
-                icon: "eye-outline"
-                theme_icon_color: "Custom"
-                on_release: app.root.get_screen('note_editor').toggle_preview()
+                    MDIconButton:
+                        id: search_button
+                        icon: "magnify"
+                        theme_icon_color: "Custom"
+                        on_release: app.root.get_screen('note_editor').toggle_search()
 
-            MDIconButton:
-                id: export_button
-                icon: "export-variant"
-                theme_icon_color: "Custom"
-                on_release: app.root.get_screen('note_editor').export_note_as_txt()
+                    MDIconButton:
+                        id: image_button
+                        icon: "image-plus"
+                        theme_icon_color: "Custom"
+                        on_release: app.root.get_screen('note_editor').pick_image()
 
-            # small fixed gap -- separates "view" tools from "note" actions
-            Widget:
-                size_hint_x: None
-                width: dp(10)
+                    MDIconButton:
+                        id: preview_button
+                        icon: "eye-outline"
+                        theme_icon_color: "Custom"
+                        on_release: app.root.get_screen('note_editor').toggle_preview()
 
-            MDIconButton:
-                id: duplicate_button
-                icon: "content-copy"
-                theme_icon_color: "Custom"
-                on_release: app.root.get_screen('note_editor').duplicate_note()
+                    MDIconButton:
+                        id: export_button
+                        icon: "export-variant"
+                        theme_icon_color: "Custom"
+                        on_release: app.root.get_screen('note_editor').export_note_as_txt()
 
-            # gap before delete -- destructive action shouldn't sit
-            # shoulder-to-shoulder with duplicate/save
-            Widget:
-                size_hint_x: None
-                width: dp(10)
+                    Widget:
+                        size_hint_x: None
+                        width: dp(10)
 
-            MDIconButton:
-                id: delete_button
-                icon: "delete"
-                theme_icon_color: "Custom"
-                on_release: app.root.get_screen('note_editor').delete_note()
+                    MDIconButton:
+                        id: duplicate_button
+                        icon: "content-copy"
+                        theme_icon_color: "Custom"
+                        on_release: app.root.get_screen('note_editor').duplicate_note()
 
-            MDIconButton:
-                id: save_button
-                icon: "content-save"
-                theme_icon_color: "Custom"
-                on_release: app.root.get_screen('note_editor').save_note()
+                    Widget:
+                        size_hint_x: None
+                        width: dp(10)
+
+                    MDIconButton:
+                        id: delete_button
+                        icon: "delete"
+                        theme_icon_color: "Custom"
+                        on_release: app.root.get_screen('note_editor').delete_note()
+
+                    MDIconButton:
+                        id: save_button
+                        icon: "content-save"
+                        theme_icon_color: "Custom"
+                        on_release: app.root.get_screen('note_editor').save_note()
 
         MDBoxLayout:
             id: title_field_container
@@ -536,16 +553,89 @@
 
         # ── formatting toolbar: undo/redo, bold, italic, underline,
         #    highlight, alignment, font size, font family ──
+        # ── docked slot: holds the formatting toolbar here when the
+        #    window is wide enough (tablet) -- empty and zero-height
+        #    when the toolbar has been moved to float at the bottom ──
         MDBoxLayout:
-            id: toolbar
+            id: toolbar_top_slot
             size_hint_y: None
-            height: "48dp"
+            height: dp(48) if not root.is_compact else 0
             padding: "8dp", "4dp"
-            spacing: "4dp"
 
-            # ── undo / redo -- moved here from their own row, kept as
-            #    the leftmost group since they're a different kind of
-            #    action (history) than the formatting buttons that follow ──
+            FormattingToolbar:
+                id: formatting_toolbar
+
+        # ── editor_body: wraps the content card and the bottom
+        #    floating-toolbar slot together, since a floating overlay
+        #    needs a FloatLayout/AnchorLayout, not a plain vertical box ──
+        FloatLayout:
+            id: editor_body
+            size_hint: 1, 1
+
+            MDCard:
+                id: content_card
+                orientation: "vertical"
+                size_hint: 1, None
+                # Leaves room at the bottom for the floating toolbar
+                # only when it's actually floating there -- otherwise
+                # fills the whole body like before.
+                height: self.parent.height - (dp(76) if root.is_compact else 0)
+                pos_hint: {"x": 0, "top": 1}
+                padding: "20dp"
+                radius: [20, 20, 20, 20]
+                elevation: 1
+
+                MDBoxLayout:
+                    id: content_container
+                    orientation: "vertical"
+                    size_hint: 1, 1
+
+                    TextInput:
+                        id: content_field
+                        multiline: True
+                        size_hint: 1, 1
+                        font_size: "16sp"
+                        hint_text: "Once upon a note..."
+                        background_normal: ""
+                        background_active: ""
+                        padding: dp(8), dp(8), dp(8), dp(8)
+
+            # ── floating slot: only visible/reachable when compact --
+            #    anchors the toolbar near the bottom edge with a
+            #    comfortable margin on all sides for the "floating" look ──
+            AnchorLayout:
+                id: toolbar_bottom_slot
+                size_hint: 1, None
+                height: dp(76) if root.is_compact else 0
+                anchor_x: "center"
+                anchor_y: "bottom"
+                padding: dp(12)
+
+<FormattingToolbar>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: dp(56) if root.is_compact else dp(48)
+    padding: (dp(6), dp(4)) if root.is_compact else (dp(4), dp(2))
+    radius: [20] if root.is_compact else [0]
+    elevation: 6 if root.is_compact else 0
+    md_bg_color: (0.92, 0.84, 0.66, 1) if root.is_compact else (0, 0, 0, 0)
+
+    ScrollView:
+        id: toolbar_icons_scroll
+        size_hint: 1, 1
+        do_scroll_x: True
+        do_scroll_y: False
+        bar_width: dp(2)
+
+        MDBoxLayout:
+            id: toolbar_icons
+            orientation: "horizontal"
+            size_hint_x: None
+            size_hint_y: 1
+            width: self.minimum_width
+            padding: dp(8), 0
+            spacing: dp(4)
+
             MDIconButton:
                 id: undo_button
                 icon: "undo"
@@ -562,7 +652,6 @@
                 size_hint_x: None
                 width: dp(16)
 
-            # ── formatting group: bold / italic / underline / highlight ──
             MDIconButton:
                 id: bold_button
                 icon: "format-bold"
@@ -586,7 +675,7 @@
                 icon: "marker"
                 theme_icon_color: "Custom"
                 on_release: app.root.get_screen('note_editor').make_highlight()
-            
+
             MDIconButton:
                 id: link_button
                 icon: "link-variant"
@@ -597,7 +686,6 @@
                 size_hint_x: None
                 width: dp(16)
 
-            # ── alignment group: left / center / right ──
             MDIconButton:
                 id: align_left_button
                 icon: "format-align-left"
@@ -617,9 +705,9 @@
                 on_release: app.root.get_screen('note_editor').set_align_right()
 
             Widget:
-                # flexible spacer -- pushes the font group to the right
+                size_hint_x: None
+                width: dp(16)
 
-            # ── font group: size down / size up / cycle family ──
             MDIconButton:
                 id: font_decrease_button
                 icon: "format-font-size-decrease"
@@ -637,32 +725,7 @@
                 icon: "format-font"
                 theme_icon_color: "Custom"
                 on_release: app.root.get_screen('note_editor').cycle_font()
-
-        MDCard:
-            id: content_card
-            orientation: "vertical"
-            size_hint: 1, 1
-            padding: "20dp"
-            radius: [20, 20, 20, 20]
-            elevation: 1
-
-            MDBoxLayout:
-                id: content_container
-                orientation: "vertical"
-                size_hint: 1, 1
-
-                TextInput:
-                    id: content_field
-                    multiline: True
-                    size_hint: 1, 1
-                    font_size: "16sp"
-                    hint_text: "Once upon a note..."
-                    # Clearing these removes Kivy's default TextInput border/atlas image,
-                    # so background_color actually shows instead of being overridden.
-                    background_normal: ""
-                    background_active: ""
-                    padding: dp(8), dp(8), dp(8), dp(8)
-
+                
 <RecentlyDeletedScreen>:
     name: "recently_deleted"
     # Temporary hardcoded colors matching the rest of the app's palette
