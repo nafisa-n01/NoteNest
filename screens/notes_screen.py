@@ -18,7 +18,8 @@ from database.notes_queries import (
 import trash_store
 from datetime import datetime, timezone
 import re
-from screens.note_editor_screen import META_PATTERN, IMAGE_TOKEN_PATTERN
+from screens.editor.note_meta import META_PATTERN
+from screens.editor.markup import IMAGE_TOKEN_PATTERN, LINK_TOKEN_PATTERN
 
 from theme.theme_manager import theme_manager
 from theme.themed_screen import ThemedScreenMixin
@@ -92,6 +93,8 @@ def _clean_preview_text(content):
     # card previews doesn't have that glyph, so it was showing as a
     # missing-character box instead of an actual camera icon.
     text = IMAGE_TOKEN_PATTERN.sub("[Photo] ", text)
+    # Links show as just their label text, not the raw {{link:...}} marker
+    text = LINK_TOKEN_PATTERN.sub(lambda m: m.group(2), text)
     
     # Strip bold/underline/highlight/italic markers -- order matters,
     # same reasoning as convert_formatting_to_markup in the editor:
