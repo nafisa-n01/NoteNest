@@ -710,7 +710,7 @@ class NoteEditorScreen(ThemedScreenMixin,MDScreen):
         # This only ever runs on an actual Android device/build --
         # desktop behavior below is completely unchanged.
         if platform == "android":
-            from jnius import autoclass
+            from jnius import autoclass  # type: ignore  -- Android-only import, not installed on desktop by design
             Intent = autoclass("android.content.Intent")
             Uri = autoclass("android.net.Uri")
             PythonActivity = autoclass("org.kivy.android.PythonActivity")
