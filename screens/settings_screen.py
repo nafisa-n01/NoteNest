@@ -112,10 +112,42 @@ class SettingsScreen(ThemedScreenMixin, MDScreen):
         pass
 
     def export_to_file(self):
-        pass
+        # NOTE: the exported file is PLAIN, UNENCRYPTED JSON -- anyone
+        # with access to it can read every note it contains. This is a
+        # deliberate, known trade-off for now (encryption is planned
+        # for a later version) -- the confirmation dialog shown to the
+        # user should say this plainly before they choose where to
+        # save it.
+        from services.manual_export import export_backup_to_file
+
+        def on_success(file_path):
+            print(f"Backup exported to {file_path}")
+            # TODO: replace with a real MDSnackbar/toast once the UI
+            # feedback pattern for this screen is decided.
+
+        def on_error(exc):
+            print(f"Export failed: {exc}")
+            # TODO: same as above -- user-visible error feedback.
+
+        export_backup_to_file(on_success, on_error)
 
     def import_from_file(self):
-        pass
+        from services.manual_export import import_backup_from_file
+
+        def on_success():
+            print("Backup imported successfully.")
+            # TODO: replace with real UI feedback, and consider
+            # navigating back to Home / refreshing the currently
+            # visible Notes list, since the underlying data just
+            # changed out from under whatever screen the user returns to.
+
+        def on_error(exc):
+            print(f"Import failed: {exc}")
+            # TODO: real UI feedback -- and for a RestoreError
+            # specifically, the message is already written to be
+            # shown to the user as-is (see restore_engine.py).
+
+        import_backup_from_file(on_success, on_error)
 
     # ── privacy ──
     def open_privacy_settings(self):
