@@ -8,7 +8,9 @@ def create_tasks(title,user_id):
       VALUES(?,?)       
     ''',(title,user_id))
    conn.commit()
+   task_id = cursor.lastrowid #modified here if it crashes let me know - naf
    conn.close()
+   return task_id #modified here if it crashes let me know - naf
 def get_all_tasks(user_id):
     conn=get_connection()
     cursor=conn.cursor()

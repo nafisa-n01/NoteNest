@@ -8,7 +8,9 @@ def create_category(name,color,user_id):
       VALUES(?,?,?)       
     ''',(name,color,user_id))
    conn.commit()
+   category_id = cursor.lastrowid #modified here if it crashes let me know - naf
    conn.close()
+   return category_id  #modified here if it crashes let me know - naf
 def get_all_categories(user_id):
     conn=get_connection()
     cursor=conn.cursor()
@@ -56,3 +58,4 @@ def assign_categories_to_notes(note_id,category_id):
     ''',(category_id,note_id))
     conn.commit()
     conn.close()
+
