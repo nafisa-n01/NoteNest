@@ -12,7 +12,7 @@ from screens.notes.helpers import format_last_edited, clean_preview_text
 import user_prefs
 
 DEFAULT_NOTEBOOK_ID = 1
-GRID_ROW_HEIGHT = dp(210)
+GRID_ROW_HEIGHT = dp(230)
 
 
 class NotesListMixin:

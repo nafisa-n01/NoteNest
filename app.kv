@@ -127,7 +127,7 @@
     padding: "16dp"
     spacing: "6dp"
     size_hint_y: None
-    height: dp(210) if root.grid_mode else dp(100)
+    height: dp(230) if root.grid_mode else dp(100)
     radius: [24, 24, 24, 24]
     ripple_behavior: True
     elevation: 3
@@ -157,13 +157,21 @@
                 font_style: "Title"
                 role: "medium"
                 adaptive_height: True
+                halign: "left"
+                valign: "top"
+                # Small left inset so the text doesn't start flush
+                # against the card's inner edge.
+                padding: dp(2), 0
+                # Height bound to ~2 lines (Title/medium role is ~16sp
+                # with ~24dp line height, so 2 lines ≈ 48dp) -- this is
+                # what actually lets shorten+max_lines wrap normally
+                # for 2 lines and only ellipsis-truncate if a 3rd line
+                # would've been needed. Normal wrapping breaks on word
+                # boundaries; only the truncated final line gets "...".
+                text_size: self.width, (dp(48) if root.grid_mode else None)
                 shorten: True
                 shorten_from: "right"
-                # Wraps to 2 lines in grid mode (narrower cards), stays
-                # single-line in list mode -- this was already fixed
-                # once before, then accidentally reverted when the pin
-                # icon's card rewrite used an older version of this rule.
-                max_lines: 3 if root.grid_mode else 1
+                max_lines: 2 if root.grid_mode else 1
                 theme_text_color: "Custom"
                 text_color: 0.29, 0.20, 0.15, 1
 
@@ -172,8 +180,15 @@
             font_style: "Body"
             role: "small"
             adaptive_height: True
+            halign: "left"
+            valign: "top"
+            padding: dp(6), 0
+            # Same fix as the title above -- Body/small role is
+            # smaller text (~18dp/line), so 4 lines ≈ 72dp.
+            text_size: self.width, (dp(72) if root.grid_mode else None)
             shorten: True
             shorten_from: "right"
+            max_lines: 4 if root.grid_mode else 1
             theme_text_color: "Custom"
             text_color: 0.54, 0.35, 0.17, 1
 
