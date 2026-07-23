@@ -123,72 +123,84 @@
 
 # ── NoteCard ──────────────────────────────────────────────────
 <NoteCard>:
-    orientation: "vertical"
+    orientation: "horizontal"
     padding: "16dp"
     spacing: "6dp"
     size_hint_y: None
-    height: "100dp"
+    height: dp(180) if root.grid_mode else dp(100)
     radius: [24, 24, 24, 24]
     ripple_behavior: True
     elevation: 3
     md_bg_color: 0.97, 0.95, 0.90, 1
 
     MDBoxLayout:
-        orientation: "horizontal"
-        adaptive_height: True
+        orientation: "vertical"
         spacing: "6dp"
 
-        MDIconButton:
-            id: selection_checkbox
-            # Purely visual -- tapping anywhere on the card already
-            # toggles selection via on_touch_up, so this doesn't need
-            # its own release handler. disabled: True lets taps over it
-            # pass through to the card underneath instead of being
-            # swallowed.
-            icon: "checkbox-marked-circle" if root.is_selected else "checkbox-blank-circle-outline"
-            theme_icon_color: "Custom"
-            icon_color: 0.29, 0.20, 0.15, 1
-            size_hint_x: None
-            width: dp(36) if root.selection_mode else 0
-            opacity: 1 if root.selection_mode else 0
-            disabled: True
+        MDBoxLayout:
+            orientation: "horizontal"
+            adaptive_height: True
+            spacing: "6dp"
+
+            MDIconButton:
+                id: selection_checkbox
+                icon: "checkbox-marked-circle" if root.is_selected else "checkbox-blank-circle-outline"
+                theme_icon_color: "Custom"
+                icon_color: 0.29, 0.20, 0.15, 1
+                size_hint_x: None
+                width: dp(36) if root.selection_mode else 0
+                opacity: 1 if root.selection_mode else 0
+                disabled: True
+
+            MDLabel:
+                text: root.title
+                font_style: "Title"
+                role: "medium"
+                adaptive_height: True
+                shorten: True
+                shorten_from: "right"
+                # Allows the title to wrap onto a second line in grid
+                # mode (where cards are narrower), instead of being
+                # truncated after just a few characters on one line.
+                # List mode is untouched -- stays single-line.
+                max_lines: 2 if root.grid_mode else 1
+                theme_text_color: "Custom"
+                text_color: 0.29, 0.20, 0.15, 1
 
         MDLabel:
-            text: root.title
-            font_style: "Title"
-            role: "medium"
+            text: root.preview
+            font_style: "Body"
+            role: "small"
             adaptive_height: True
             shorten: True
             shorten_from: "right"
             theme_text_color: "Custom"
-            text_color: 0.29, 0.20, 0.15, 1
+            text_color: 0.54, 0.35, 0.17, 1
 
-        MDIconButton:
-            id: pin_icon
-            icon: "pin" if root.is_pinned else "pin-outline"
-            theme_icon_color: "Custom"
-            icon_color: 0.54, 0.35, 0.17, 1
-            size_hint: None, None
-            size: dp(36), dp(36)
-            on_release: root.toggle_pin()
+        Widget:
+            size_hint_y: 1 if root.grid_mode else None
+            height: 0
 
-    MDLabel:
-        text: root.preview
-        font_style: "Body"
-        role: "small"
-        adaptive_height: True
-        shorten: True
-        shorten_from: "right"
-        theme_text_color: "Custom"
-        text_color: 0.54, 0.35, 0.17, 1
+        MDLabel:
+            text: root.last_edited
+            font_style: "Label"
+            role: "small"
+            adaptive_height: True
+            theme_text_color: "Custom"
+            text_color: 0.65, 0.52, 0.35, 1
 
-    MDLabel:
-        text: root.last_edited
-        font_style: "Label"
-        role: "small"
-        adaptive_height: True
-        theme_text_color: "Custom"
-        text_color: 0.65, 0.52, 0.35, 1
+    MDIconButton:
+        id: pin_icon
+        # Own column on the right, spanning the whole card -- pos_hint
+        # centers it vertically against the card's full height instead
+        # of sitting inline with the title near the top.
+        icon: "pin" if root.is_pinned else "pin-outline"
+        theme_icon_color: "Custom"
+        icon_color: 0.54, 0.35, 0.17, 1
+        size_hint: None, None
+        size: dp(36), dp(36)
+        pos_hint: {"center_y": 0.5}
+        on_release: root.toggle_pin()
 
 # ── AttachmentThumbnail ──────────────────────────────────────────
 <AttachmentThumbnail>:
@@ -223,74 +235,78 @@
             orientation: "vertical"
             size_hint: 1, 1
 
-            MDFloatLayout:
+            MDBoxLayout:
                 id: top_bar
                 size_hint_y: None
                 height: "56dp"
+                padding: "8dp", "4dp"
+                spacing: "4dp"
 
                 MDIconButton:
                     id: back_button
                     icon: "arrow-left"
                     theme_icon_color: "Custom"
-                    pos_hint: {"x": 0, "center_y": 0.5}
                     on_release: root.go_home()
 
-                MDLabel:
-                    id: header_label
-                    text: "Notes"
-                    font_style: "Title"
-                    role: "large"
-                    theme_text_color: "Custom"
-                    halign: "center"
-                    valign: "middle"
-                    text_size: self.size
-                    size_hint: 1, 1
-                    pos_hint: {"x": 0, "y": -0.1}
-
-                # ── normal mode: sort icons + toggle-select icon ──
                 MDBoxLayout:
-                    id: sort_controls
+                    # Wrapping header_label like this just to add a
+                    # tiny top spacer -- nudges the text down slightly
+                    # without needing to touch the row's own height or
+                    # padding (which would also shift the icon buttons).
+                    orientation: "vertical"
+                    size_hint_x: 1
+
+                    Widget:
+                        size_hint_y: None
+                        height: dp(6)
+
+                    MDLabel:
+                        id: header_label
+                        text: "Notes"
+                        font_style: "Title"
+                        role: "large"
+                        theme_text_color: "Custom"
+                        halign: "left"
+                        valign: "bottom"
+                        text_size: self.size
+                        size_hint_y: 1
+
+                # ── normal mode: single overflow menu button,
+                #    replacing the old two sort icons ──
+                MDIconButton:
+                    id: options_button
+                    icon: "dots-vertical"
+                    theme_icon_color: "Custom"
+                    theme_bg_color: "Custom"
+                    # Subtle shaded circle behind the icon, matching the
+                    # app's warm palette -- explicit equal width/height
+                    # plus a radius equal to half that size is what
+                    # makes it render as a full circle rather than a
+                    # rounded rectangle.
+                    md_bg_color: 0.92, 0.84, 0.66, 0.6
+                    radius: [dp(20)]
                     size_hint: None, None
-                    size: (dp(130), dp(48)) if not root.selection_mode else (0, 48)
+                    size: dp(40), dp(40)
+                    pos_hint: {"center_y": 0.5}
                     opacity: 0 if root.selection_mode else 1
                     disabled: root.selection_mode
-                    spacing: "4dp"
-                    pos_hint: {"right": 1, "center_y": 0.5}
-
-                    MDIconButton:
-                        id: sort_title_button
-                        icon: "sort-alphabetical-ascending"
-                        theme_icon_color: "Custom"
-                        on_release: root.sort_notes('title')
-
-                    MDIconButton:
-                        id: sort_date_button
-                        icon: "sort-calendar-ascending"
-                        theme_icon_color: "Custom"
-                        on_release: root.sort_notes('date')
-
-                    MDIconButton:
-                        id: select_mode_button
-                        icon: "checkbox-multiple-marked-outline"
-                        theme_icon_color: "Custom"
-                        on_release: root.toggle_selection_mode()
+                    on_release: root.open_options_menu()
 
                 # ── selection mode: count + bulk delete + cancel ──
                 MDBoxLayout:
                     id: selection_controls
-                    size_hint: None, None
-                    size: (dp(190), dp(48)) if root.selection_mode else (0, 48)
+                    size_hint_x: None
+                    width: dp(190) if root.selection_mode else 0
                     opacity: 1 if root.selection_mode else 0
                     disabled: not root.selection_mode
                     spacing: "4dp"
-                    pos_hint: {"right": 1, "center_y": 0.5}
 
                     MDLabel:
                         id: selection_count_label
                         text: "0 selected"
                         theme_text_color: "Custom"
                         halign: "right"
-                        valign: "middle"
+                        valign: "bottom"
 
                     MDIconButton:
                         id: bulk_delete_button
@@ -307,15 +323,30 @@
             MDBoxLayout:
                 id: search_bar
                 size_hint_y: None
-                height: "72dp"
-                padding: "16dp", "8dp"
+                height: "52dp"
+                padding: "16dp", "6dp"
 
-                MDTextField:
-                    id: search_field
-                    on_text: root.search_notes(self.text)
+                MDCard:
+                    orientation: "horizontal"
+                    padding: dp(14), dp(4)
+                    radius: [20]
+                    elevation: 1
+                    md_bg_color: 0.92, 0.84, 0.66, 1
 
-                    MDTextFieldHintText:
-                        text: "Search notes..."
+                    TextInput:
+                        id: search_field
+                        multiline: False
+                        hint_text: "Search notes..."
+                        font_size: "15sp"
+                        background_normal: ""
+                        background_active: ""
+                        background_color: 0, 0, 0, 0
+                        # Reduced top/bottom padding -- 10dp was leaving
+                        # too little vertical room for the text itself,
+                        # clipping the top of capital letters like "S".
+                        # Height/shape of the bar itself is unchanged.
+                        padding: dp(10), dp(6), dp(10), dp(6)
+                        on_text: root.search_notes(self.text)
 
             ScrollView:
                 size_hint: 1, 1

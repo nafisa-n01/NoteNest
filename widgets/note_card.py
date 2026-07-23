@@ -13,6 +13,7 @@ class NoteCard(MDCard):
     # card by NotesScreen when bulk-select is toggled; is_selected
     # tracks whether THIS card is currently checked.
     selection_mode = BooleanProperty(False)
+    grid_mode = BooleanProperty(False)
     is_selected = BooleanProperty(False)
 
     def on_touch_down(self, touch):

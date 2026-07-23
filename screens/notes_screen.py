@@ -4,12 +4,16 @@
 from kivymd.uix.screen import MDScreen
 from widgets.note_card import NoteCard
 from kivy.metrics import dp
-from kivy.properties import BooleanProperty
+from kivy.properties import BooleanProperty, StringProperty
 from kivy.uix.modalview import ModalView
 from kivy.uix.boxlayout import BoxLayout
 from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDButton, MDButtonText
+from kivy.core.window import Window
+from kivy.uix.behaviors import ButtonBehavior
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDIconButton
 
 from database.notes_queries import (
     get_all_notes, search_notes as db_search_notes, archive_notes,
@@ -29,6 +33,13 @@ from theme.palettes import BACKGROUND, TEXT_PRIMARY, CARD_SECONDARY, ACCENT
 # creation/selection screen yet. Using 1 as a placeholder until Tabshira
 # confirms how notebooks get created (one default per user? a picker?).
 DEFAULT_NOTEBOOK_ID = 1
+
+class _MenuRow(ButtonBehavior, MDBoxLayout):
+    # A single tappable row inside the "..." options menu -- combining
+    # ButtonBehavior with a layout class is a standard Kivy pattern for
+    # making a whole row (icon + label together) respond to one tap,
+    # rather than needing a separate widget per row.
+    pass
 
 def _format_last_edited(updated_at):
     if not updated_at:
@@ -111,6 +122,9 @@ def _clean_preview_text(content):
 class NotesScreen(ThemedScreenMixin,MDScreen):
     sort_by = "date"
     selection_mode = BooleanProperty(False)
+    # "list" or "grid" -- which layout style the notes list currently
+    # renders in.
+    view_mode = StringProperty("list")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -121,7 +135,6 @@ class NotesScreen(ThemedScreenMixin,MDScreen):
     #NEWLY ADDED CONSTANTS
     THEME_MAP = {
         "self":              ("md_bg_color", BACKGROUND),
-        "top_bar":           ("md_bg_color", CARD_SECONDARY),
         "back_button":       ("icon_color", TEXT_PRIMARY),
         "header_label":      ("text_color", TEXT_PRIMARY),
         "sort_title_button": ("icon_color", TEXT_PRIMARY),
@@ -150,69 +163,129 @@ class NotesScreen(ThemedScreenMixin,MDScreen):
                 card.apply_theme()
 
     def load_notes(self):
-        self.ids.notes_list.clear_widgets()
-
-        # get_all_notes() returns raw tuples in column order:
-        # (id, notebook_id, title, content, is_pinned, is_archived,
-        #  created_at, updated_at, category_id)
         all_notes = get_all_notes(DEFAULT_NOTEBOOK_ID)
-
-        # is_archived is index 5 -- filter these out, get_all_notes()
-        # doesn't do it for us
         visible = [n for n in all_notes if n[5] == 0]
-
-        # is_pinned is index 4
         pinned = [n for n in visible if n[4] == 1]
         unpinned = [n for n in visible if n[4] == 0]
-
         if self.sort_by == "title":
             unpinned.sort(key=lambda n: n[2].lower())
-        # "date" case needs no extra sort -- the SQL query already orders
-        # by updated_at DESC
-
-        for note in pinned + unpinned:
-            card = NoteCard(
-                title=note[2],                        # title
-                preview=_clean_preview_text(note[3]),  # cleaned content
-                note_id=note[0],         # id
-                is_pinned=bool(note[4]),
-                last_edited=_format_last_edited(note[7]),  # updated_at
-                selection_mode=self.selection_mode,
-                is_selected=note[0] in self.selected_note_ids,
-            )
-            self.ids.notes_list.add_widget(card)
-            # Theme this card immediately with whatever the current
-            # theme is -- it didn't exist yet the last time
-            # on_theme_applied ran, so it can't wait for the next
-            # theme change to look correct.
-            if hasattr(card, "apply_theme"):
-                card.apply_theme()
+        self._populate_notes_list(pinned + unpinned)
 
     def search_notes(self, query):
         if query.strip() == "":
             self.load_notes()
             return
+        results = db_search_notes(query)
+        self._populate_notes_list(results)
 
+    def _build_note_card(self, note, grid_mode=False):
+        return NoteCard(
+            title=note[2],
+            preview=_clean_preview_text(note[3]),
+            note_id=note[0],
+            is_pinned=bool(note[4]),
+            last_edited=_format_last_edited(note[7]),
+            selection_mode=self.selection_mode,
+            is_selected=note[0] in self.selected_note_ids,
+            grid_mode=grid_mode,
+        )
+
+    def _populate_notes_list(self, notes):
+        # Shared by load_notes() and search_notes() so list-vs-grid
+        # layout logic only has to exist in one place.
         self.ids.notes_list.clear_widgets()
 
-        # Note: db_search_notes() searches across ALL notebooks, not just
-        # the current one. Fine while there's only one notebook in use --
-        # revisit once real notebooks exist.
-        results = db_search_notes(query)
+        if self.view_mode == "list":
+            for note in notes:
+                card = self._build_note_card(note, grid_mode=False)
+                self.ids.notes_list.add_widget(card)
+                if hasattr(card, "apply_theme"):
+                    card.apply_theme()
+        else:
+            # Grid mode: pack notes two-per-row into plain horizontal
+            # strips added to the SAME vertical notes_list container --
+            # avoids swapping to a different layout widget entirely.
+            for i in range(0, len(notes), 2):
+                row = BoxLayout(
+                    orientation="horizontal", size_hint_y=None,
+                    height=dp(180), spacing=dp(10),
+                )
+                for note in notes[i:i + 2]:
+                    card = self._build_note_card(note, grid_mode=True)
+                    row.add_widget(card)
+                    if hasattr(card, "apply_theme"):
+                        card.apply_theme()
+                self.ids.notes_list.add_widget(row)
 
-        for note in results:
-            card = NoteCard(
-                title=note[2],                        # title
-                preview=_clean_preview_text(note[3]),  # cleaned content
-                note_id=note[0],         # id
-                is_pinned=bool(note[4]),
-                last_edited=_format_last_edited(note[7]),  # updated_at
-                selection_mode=self.selection_mode,
-                is_selected=note[0] in self.selected_note_ids,
+    def toggle_view_mode(self):
+        self.view_mode = "grid" if self.view_mode == "list" else "list"
+        self.load_notes()
+
+    def open_options_menu(self):
+        button = self.ids.options_button
+        # Converts the button's local position to absolute window
+        # coordinates, so the menu appears anchored under it instead
+        # of centered on screen like the other popups in this app.
+        button_x, button_y = button.to_window(*button.pos)
+
+        menu_width = dp(220)
+        row_height = dp(46)
+        menu_height = row_height * 4
+
+        target_x = min(button_x + button.width - menu_width, Window.width - menu_width - dp(8))
+        target_x = max(target_x, dp(8))
+        target_y = max(button_y - menu_height - dp(4), dp(8))
+
+        card = MDCard(
+            orientation="vertical",
+            size_hint=(None, None),
+            size=(menu_width, menu_height),
+            radius=[14],
+            elevation=4,
+            md_bg_color=(0.97, 0.95, 0.90, 1),
+        )
+
+        modal = ModalView(
+            size_hint=(None, None),
+            size=(menu_width, menu_height),
+            pos=(target_x, target_y),
+            auto_dismiss=True,
+            # No dimmed backdrop -- this should read as a dropdown
+            # menu, not a blocking dialog.
+            background_color=(0, 0, 0, 0),
+        )
+
+        def add_row(icon_name, label_text, callback):
+            row = _MenuRow(
+                orientation="horizontal", size_hint_y=None, height=row_height,
+                padding=(dp(10), 0), spacing=dp(10),
             )
-            self.ids.notes_list.add_widget(card)
-            if hasattr(card, "apply_theme"):
-                card.apply_theme()
+            icon = MDIconButton(
+                icon=icon_name, disabled=True,
+                theme_icon_color="Custom", icon_color=(0.29, 0.20, 0.15, 1),
+            )
+            label = MDLabel(
+                text=label_text, theme_text_color="Custom",
+                text_color=(0.29, 0.20, 0.15, 1), valign="middle",
+            )
+            row.add_widget(icon)
+            row.add_widget(label)
+
+            def _on_release(*_):
+                modal.dismiss()
+                callback()
+            row.bind(on_release=_on_release)
+            card.add_widget(row)
+
+        view_toggle_icon = "view-list" if self.view_mode == "grid" else "view-grid"
+        view_toggle_label = "View as List" if self.view_mode == "grid" else "View as Grid"
+        add_row(view_toggle_icon, view_toggle_label, self.toggle_view_mode)
+        add_row("sort-alphabetical-ascending", "Sort Alphabetically", lambda: self.sort_notes("title"))
+        add_row("sort-calendar-ascending", "Sort by Date", lambda: self.sort_notes("date"))
+        add_row("checkbox-multiple-marked-outline", "Select Notes", self.toggle_selection_mode)
+
+        modal.add_widget(card)
+        modal.open()
 
     def sort_notes(self, mode):
         self.sort_by = mode
