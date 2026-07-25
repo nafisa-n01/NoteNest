@@ -48,8 +48,8 @@ DEFAULT = {
     "button":          "#D6567A",
     "text_primary":    "#4A3B6B",
     "button_text":     "#FFF9FC",
-    "tile_accent_pomodoro": "#6B9A5C",   # softer green that sits well with the pink/lavender palette
-    "tile_accent_tasks":    "#5C7FB0",   # periwinkle-blue, closer kin to the lavender background
+    "tile_accent_pomodoro": "#6B9A5C",  
+    "tile_accent_tasks":    "#5C7FB0",   
 }
 
 MONOCHROME = {
@@ -62,7 +62,7 @@ MONOCHROME = {
     "button":          "#E0E0E0",
     "text_primary":    "#FFFFFF",
     "button_text":     "#121212",
-    "tile_accent_pomodoro": "#B0B0B0",   # falls back near the theme's own accent/gray since true green/navy would break the monochrome concept
+    "tile_accent_pomodoro": "#B0B0B0",  
     "tile_accent_tasks":    "#B0B0B0",
 }
 

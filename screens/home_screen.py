@@ -78,13 +78,8 @@ class HomeScreen(ThemedScreenMixin, MDScreen):
         try:
             notes = get_all_notes(notebook_id)
             active_dates = {n[7][:10] for n in notes if n[7]}  # updated_at date part
-            notes = get_all_notes(notebook_id)
-            print("DEBUG updated_at values:", [n[7] for n in notes])
-            active_dates = {n[7][:10] for n in notes if n[7]}
-            print("DEBUG active_dates:", active_dates)
-        except Exception:
+            except Exception:
             active_dates = set()
-
         today = datetime.now().date()
         for i in range(6, -1, -1):
             day = today - timedelta(days=i)

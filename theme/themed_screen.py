@@ -19,3 +19,8 @@ class ThemedScreenMixin:
             if widget is None:
                 continue
             setattr(widget, prop_name, theme_manager.get_color(token))
+        if hasattr(self, "on_theme_applied"):
+            try:
+                self.on_theme_applied()
+            except Exception as e:
+                print(f"[ThemedScreenMixin] on_theme_applied failed for {self}: {e}")
