@@ -7,7 +7,7 @@ from screens.note_editor_screen import NoteEditorScreen
 from screens.settings_screen import SettingsScreen
 from screens.timer_screen import TimerScreen
 from screens.calendar_screen import CalendarScreen 
-from database.db import create_tables # Database initialization
+from database.db import create_tables
 from screens.recently_deleted_screen import RecentlyDeletedScreen
 from kivy.core.window import Window
 
@@ -22,7 +22,7 @@ Window.softinput_mode = "below_target"
 
 class NoteNestApp(MDApp):
     def build(self):
-        create_tables() # Initializes database on app startup, Creates all the tables if they don'y exist yet
+        create_tables() 
         self.title = "NoteNest"
         Builder.load_file("app.kv") #home screen, note home screen, note editor
         Builder.load_file("settings_screen.kv")
