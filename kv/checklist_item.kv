@@ -1,4 +1,5 @@
-#:kivy 2.0
+#:kivy 2.3.1
+
 
 <SubChecklistItem>:
     orientation: "horizontal"
@@ -11,17 +12,22 @@
         size_hint: None, None
         size: 20, 20
         pos_hint: {"center_y": 0.5}
+
         canvas:
             Color:
                 rgba: (0.54, 0.35, 0.17, 1) if root.checked else (1, 1, 1, 1)
+
             Ellipse:
                 pos: self.pos
                 size: self.size
+
             Color:
                 rgba: 0.54, 0.35, 0.17, 1
+
             Line:
                 ellipse: self.x, self.y, self.width, self.height
                 width: 1.4
+
         on_touch_down:
             if self.collide_point(*args[1].pos): root.toggle()
 
@@ -40,111 +46,168 @@
     size_hint_y: None
     height: self.minimum_height
     padding: [0, 4, 0, 4]
-    spacing: 0
+    spacing: 2
 
-    # Main row
+    # Complete task card
     BoxLayout:
-        orientation: "horizontal"
+        orientation: "vertical"
         size_hint_y: None
-        height: 64
+        height: self.minimum_height
         padding: [16, 10, 16, 10]
-        spacing: 12
+        spacing: 4
+
         canvas.before:
             Color:
                 rgba: 1, 1, 1, 1
+
             RoundedRectangle:
                 pos: self.pos
                 size: self.size
-                radius: [14,]
+                radius: [14]
+
             Color:
                 rgba: 0.88, 0.85, 0.80, 1
+
             Line:
                 rounded_rectangle: self.x, self.y, self.width, self.height, 14
                 width: 0.8
 
-        # Expand/collapse button
-        Label:
-            id: expand_btn
-            text: "►"
-            size_hint: None, None
-            size: 20, 20
-            pos_hint: {"center_y": 0.5}
-            font_size: 11
-            color: 0.54, 0.35, 0.17, 1
-            on_touch_down:
-                if self.collide_point(*args[1].pos): root.toggle_expand()
+        # Main task row
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: 44
+            spacing: 12
 
-        # Checkbox
-        Widget:
-            size_hint: None, None
-            size: 26, 26
-            pos_hint: {"center_y": 0.5}
-            canvas:
-                Color:
-                    rgba: (0.54, 0.35, 0.17, 1) if root.checked else (1, 1, 1, 1)
-                Ellipse:
-                    pos: self.pos
-                    size: self.size
-                Color:
-                    rgba: 0.54, 0.35, 0.17, 1
-                Line:
-                    ellipse: self.x, self.y, self.width, self.height
-                    width: 1.6
-            on_touch_down:
-                if self.collide_point(*args[1].pos): root.toggle()
+            # Expand/collapse button
+            Label:
+                id: expand_btn
+                text: "►"
+                size_hint: None, None
+                size: 20, 20
+                pos_hint: {"center_y": 0.5}
+                font_size: 11
+                color: 0.54, 0.35, 0.17, 1
 
-        # Task text
-        Label:
-            text: ("[s]" + root.text + "[/s]") if root.checked else root.text
-            markup: True
-            color: (0.70, 0.65, 0.60, 1) if root.checked else (0.29, 0.20, 0.15, 1)
-            font_size: 15
-            halign: "left"
-            valign: "middle"
-            text_size: self.size
-            size_hint_x: 1
+                on_touch_down:
+                    if self.collide_point(*args[1].pos): root.toggle_expand()
 
-        # Category tag
-        Label:
-            text: root.category
-            size_hint: None, None
-            size: 68, 26
-            pos_hint: {"center_y": 0.5}
-            font_size: 11
-            bold: True
-            color: 0.29, 0.20, 0.15, 1
-            halign: "center"
-            valign: "middle"
-            text_size: self.size
-            canvas.before:
-                Color:
-                    rgba: root.get_category_color()
-                RoundedRectangle:
-                    pos: self.pos
-                    size: self.size
-                    radius: [10,]
+            # Main checkbox
+            Widget:
+                size_hint: None, None
+                size: 26, 26
+                pos_hint: {"center_y": 0.5}
 
-        # Priority badge
-        Label:
-            text: root.priority
-            size_hint: None, None
-            size: 68, 26
-            pos_hint: {"center_y": 0.5}
-            font_size: 11
-            bold: True
-            color: 0.29, 0.20, 0.15, 1
-            halign: "center"
-            valign: "middle"
-            text_size: self.size
-            canvas.before:
-                Color:
-                    rgba: root.get_priority_color()
-                RoundedRectangle:
-                    pos: self.pos
-                    size: self.size
-                    radius: [10,]
-            on_touch_down:
-                if self.collide_point(*args[1].pos): root.cycle_priority()
+                canvas:
+                    Color:
+                        rgba: (0.54, 0.35, 0.17, 1) if root.checked else (1, 1, 1, 1)
+
+                    Ellipse:
+                        pos: self.pos
+                        size: self.size
+
+                    Color:
+                        rgba: 0.54, 0.35, 0.17, 1
+
+                    Line:
+                        ellipse: self.x, self.y, self.width, self.height
+                        width: 1.6
+
+                on_touch_down:
+                    if self.collide_point(*args[1].pos): root.toggle()
+
+            # Task title
+            Label:
+                text: ("[s]" + root.text + "[/s]") if root.checked else root.text
+                markup: True
+                color: (0.70, 0.65, 0.60, 1) if root.checked else (0.29, 0.20, 0.15, 1)
+                font_size: 15
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+                size_hint_x: 1
+
+            # Category tag
+            Label:
+                text: root.category
+                size_hint: None, None
+                size: 68, 26
+                pos_hint: {"center_y": 0.5}
+                font_size: 11
+                bold: True
+                color: 0.29, 0.20, 0.15, 1
+                halign: "center"
+                valign: "middle"
+                text_size: self.size
+
+                canvas.before:
+                    Color:
+                        rgba: root.get_category_color()
+
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [10]
+
+            # Priority badge
+            Label:
+                text: root.priority
+                size_hint: None, None
+                size: 68, 26
+                pos_hint: {"center_y": 0.5}
+                font_size: 11
+                bold: True
+                color: 0.29, 0.20, 0.15, 1
+                halign: "center"
+                valign: "middle"
+                text_size: self.size
+
+                canvas.before:
+                    Color:
+                        rgba: root.get_priority_color()
+
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [10]
+
+                on_touch_down:
+                    if self.collide_point(*args[1].pos): root.cycle_priority()
+
+        # Optional due date and link
+        BoxLayout:
+            orientation: "vertical"
+            size_hint_y: None
+            height: self.minimum_height if root.due_date or root.link else 0
+            opacity: 1 if root.due_date or root.link else 0
+            padding: [58, 0, 0, 0]
+            spacing: 2
+
+            Label:
+                text: "📅 " + root.format_due_date(root.due_date)
+                size_hint_y: None
+                height: 22 if root.due_date else 0
+                opacity: 1 if root.due_date else 0
+                color: 0.43, 0.41, 0.38, 1
+                font_size: 12
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+
+            Label:
+                text: "[u]🔗 Open attachment[/u]"
+                markup: True
+                size_hint_y: None
+                height: 22 if root.link else 0
+                opacity: 1 if root.link else 0
+                color: 0.29, 0.20, 0.15, 1
+                font_size: 12
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+
+                on_touch_down:
+                    if root.link and self.collide_point(*args[1].pos): root.open_link()
 
     # Subtask container — hidden by default
     BoxLayout:
