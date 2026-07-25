@@ -1,72 +1,220 @@
 import os
-from kivy.uix.boxlayout import BoxLayout
-from kivy.properties import StringProperty, BooleanProperty, ListProperty
-from kivy.lang import Builder
+import webbrowser
+from datetime import datetime
 
-Builder.load_file(os.path.join(os.path.dirname(__file__), '..', 'kv', 'checklist_item.kv'))
+from kivy.lang import Builder
+from kivy.properties import (
+    BooleanProperty,
+    ListProperty,
+    StringProperty,
+)
+from kivy.uix.boxlayout import BoxLayout
+
+
+# Load the separate KV layout file.
+Builder.load_file(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "kv",
+        "checklist_item.kv",
+    )
+)
 
 
 class SubChecklistItem(BoxLayout):
-    """A single subtask row inside a checklist item."""
+    """
+    A single subtask row inside a checklist item.
+    """
+
     text = StringProperty("")
     checked = BooleanProperty(False)
 
     def toggle(self):
+        """
+        Toggle the subtask between completed and incomplete.
+        """
+
         self.checked = not self.checked
 
 
 class ChecklistItem(BoxLayout):
+    """
+    A complete checklist task.
+
+    It supports:
+    - completion checkbox
+    - category
+    - priority
+    - optional due date
+    - optional attachment link
+    - expandable subtasks
+    """
+
     text = StringProperty("")
     checked = BooleanProperty(False)
+
     category = StringProperty("Study")
     priority = StringProperty("High")
-    expanded = BooleanProperty(False)  # controls subtask visibility
-    subtasks = ListProperty([])        # list of subtask text strings
+
+    # Optional information.
+    # An empty string means that the field is not shown.
+    due_date = StringProperty("")
+    link = StringProperty("")
+
+    # Controls subtask visibility.
+    expanded = BooleanProperty(False)
+
+    # List of subtask text strings.
+    subtasks = ListProperty([])
 
     CATEGORY_COLORS = {
-        "Study":  (0.98, 0.87, 0.85, 1),
-        "Life":   (0.91, 0.95, 0.87, 1),
+        "Study": (0.98, 0.87, 0.85, 1),
+        "Life": (0.91, 0.95, 0.87, 1),
         "Health": (0.90, 0.94, 0.98, 1),
-        "Work":   (0.98, 0.90, 0.90, 1),
+        "Work": (0.98, 0.90, 0.90, 1),
     }
 
     PRIORITY_COLORS = {
-        "High":   (0.98, 0.92, 0.92, 1),
+        "High": (0.98, 0.92, 0.92, 1),
         "Medium": (0.98, 0.93, 0.85, 1),
-        "Low":    (0.91, 0.95, 0.87, 1),
+        "Low": (0.91, 0.95, 0.87, 1),
     }
 
     PRIORITY_ORDER = ["High", "Medium", "Low"]
 
     def on_kv_post(self, base_widget):
-        """Called after kv is loaded — build subtask widgets."""
+        """
+        Runs after the KV layout has finished loading.
+        """
+
         self.build_subtasks()
 
+    def on_subtasks(self, instance, value):
+        """
+        Rebuild the visible subtask widgets if the subtask list changes.
+        """
+
+        if "subtask_container" in self.ids:
+            self.build_subtasks()
+
     def toggle(self):
-        """Toggle main task checked state."""
+        """
+        Toggle the main task between completed and incomplete.
+        """
+
         self.checked = not self.checked
 
     def toggle_expand(self):
-        """Show or hide subtasks."""
+        """
+        Show or hide the subtask section.
+        """
+
         self.expanded = not self.expanded
-        self.ids.subtask_container.opacity = 1 if self.expanded else 0
-        self.ids.subtask_container.size_hint_y = None if self.expanded else None
-        self.ids.subtask_container.height = self.ids.subtask_container.minimum_height if self.expanded else 0
-        self.ids.expand_btn.text = "▼" if self.expanded else "►"
+
+        container = self.ids.subtask_container
+        expand_button = self.ids.expand_btn
+
+        if self.expanded:
+            container.opacity = 1
+            container.height = container.minimum_height
+            expand_button.text = "▼"
+        else:
+            container.opacity = 0
+            container.height = 0
+            expand_button.text = "►"
 
     def build_subtasks(self):
-        """Add SubChecklistItem widgets for each subtask."""
-        self.ids.subtask_container.clear_widgets()
+        """
+        Create one SubChecklistItem widget for each subtask.
+        """
+
+        container = self.ids.subtask_container
+        container.clear_widgets()
+
         for task_text in self.subtasks:
             item = SubChecklistItem(text=task_text)
-            self.ids.subtask_container.add_widget(item)
+            container.add_widget(item)
+
+        if self.expanded:
+            container.height = container.minimum_height
 
     def cycle_priority(self):
-        current = self.PRIORITY_ORDER.index(self.priority)
-        self.priority = self.PRIORITY_ORDER[(current + 1) % 3]
+        """
+        Change priority in this order:
+
+        High -> Medium -> Low -> High
+        """
+
+        try:
+            current_index = self.PRIORITY_ORDER.index(self.priority)
+        except ValueError:
+            current_index = 0
+
+        next_index = (current_index + 1) % len(self.PRIORITY_ORDER)
+        self.priority = self.PRIORITY_ORDER[next_index]
 
     def get_category_color(self):
-        return self.CATEGORY_COLORS.get(self.category, (0.95, 0.90, 0.80, 1))
+        """
+        Return the background color for the selected category.
+        """
+
+        return self.CATEGORY_COLORS.get(
+            self.category,
+            (0.95, 0.90, 0.80, 1),
+        )
 
     def get_priority_color(self):
-        return self.PRIORITY_COLORS.get(self.priority, (0.95, 0.90, 0.80, 1))
+        """
+        Return the background color for the selected priority.
+        """
+
+        return self.PRIORITY_COLORS.get(
+            self.priority,
+            (0.95, 0.90, 0.80, 1),
+        )
+
+    def format_due_date(self, date_value):
+        """
+        Convert an ISO date such as:
+
+        2026-07-25
+
+        into:
+
+        July 25, 2026
+
+        If it is already written in another format, keep it unchanged.
+        """
+
+        if not date_value:
+            return ""
+
+        try:
+            parsed_date = datetime.strptime(
+                date_value,
+                "%Y-%m-%d",
+            )
+
+            return parsed_date.strftime("%B %d, %Y")
+
+        except ValueError:
+            return date_value
+
+    def open_link(self):
+        """
+        Open the attachment link in the computer's default browser.
+        """
+
+        cleaned_link = self.link.strip()
+
+        if not cleaned_link:
+            return
+
+        # Add https:// if the user stored a link without a protocol.
+        if not cleaned_link.startswith(
+            ("http://", "https://")
+        ):
+            cleaned_link = "https://" + cleaned_link
+
+        webbrowser.open(cleaned_link)
