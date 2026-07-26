@@ -8,9 +8,11 @@
 from kivymd.uix.card import MDCard
 from kivy.properties import BooleanProperty
 
-
 class FormattingToolbar(MDCard):
     # Set from Python whenever the toolbar is moved -- the KV rule
     # below uses this to switch between its two visual styles (flat
     # and docked, vs rounded/elevated and floating).
     is_compact = BooleanProperty(False)
+
+    def on_is_compact(self, instance, value):
+        self.apply_theme()
