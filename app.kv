@@ -687,14 +687,29 @@
         MDBoxLayout:
             id: title_field_container
             size_hint_y: None
-            height: "72dp"
-            padding: "16dp", "8dp"
+            height: "52dp"
+            padding: "16dp", "6dp"
 
-            MDTextField:
-                id: title_field
+            MDCard:
+                orientation: "horizontal"
+                padding: dp(14), dp(4)
+                radius: [20]
+                elevation: 1
+                md_bg_color: 0.92, 0.84, 0.66, 1
 
-                MDTextFieldHintText:
-                    text: "Title"
+                TextInput:
+                    id: title_field
+                    multiline: False
+                    hint_text: "Title"
+                    font_size: "17sp"
+                    background_normal: ""
+                    background_active: ""
+                    background_color: 0, 0, 0, 0
+                    # Same padding values already proven correct on the
+                    # Notes list search bar (fixed earlier for a "top of
+                    # S clipped" bug) -- reused here to avoid
+                    # reintroducing that same clipping issue.
+                    padding: dp(10), dp(6), dp(10), dp(6)
 
         MDBoxLayout:
             id: word_count_row
@@ -827,9 +842,13 @@
     size_hint_y: None
     height: dp(56) if root.is_compact else dp(48)
     padding: (dp(6), dp(4)) if root.is_compact else (dp(4), dp(2))
+    # Rounded corners + shadow only when floating at the bottom
+    # (mobile); flat/no-shadow when docked at the top (tablet), same
+    # as the rest of the docked header. Background color is no longer
+    # set here at all -- FormattingToolbar.apply_theme() now owns it
+    # in Python, so it actually tracks theme changes.
     radius: [20] if root.is_compact else [0]
-    elevation: 0
-    md_bg_color: 0, 0, 0, 0
+    elevation: 4 if root.is_compact else 0
 
     ScrollView:
         id: toolbar_icons_scroll
