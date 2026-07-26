@@ -280,7 +280,7 @@ class NoteEditorScreen(
             elif part.strip():
                 label = Label(
                     text=self._convert_part_for_preview(part),
-                    markup=True, size_hint_y=None, color=(0.29, 0.20, 0.15, 1),
+                    markup=True, size_hint_y=None, color=theme_manager.get_color(TEXT_PRIMARY), #color=(0.29, 0.20, 0.15, 1), prev code
                     halign=self.ids.content_field.halign, valign="top",
                     font_size=self.ids.content_field.font_size,
                     font_name=self.ids.content_field.font_name,
