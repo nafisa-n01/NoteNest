@@ -30,7 +30,7 @@ DARK = {
     "accent":          "#474466",
     "text_secondary":  "#553A84",
     "button":          "#5C5493",
-    "text_primary":    "#E0E0E0",
+    "text_primary":    "#B4ACBD",
     "button_text":     "#222238",
     "tile_accent_pomodoro": "#7FAF87",   # lighter green, readable on dark card
     "tile_accent_tasks":    "#7D9FD1",   # lighter navy/periwinkle, readable on dark card
@@ -40,8 +40,8 @@ DARK = {
 # lavender base with soft pink/coral accents.
 DEFAULT = {
     "background":      "#DCD6F5",
-    "card_primary":    "#F5C7DC", 
-    "card_secondary":  "#F8F5FC",
+    "card_primary":    "#F8F5FC",
+    "card_secondary":  "#F5C7DC",
     "border":          "#B9AEE8",
     "accent":          "#F2A6B4",
     "text_secondary":  "#8A7FA8",

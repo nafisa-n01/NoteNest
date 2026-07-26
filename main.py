@@ -9,7 +9,6 @@ from screens.timer_screen import TimerScreen
 from screens.calendar_screen import CalendarScreen 
 from database.db import create_tables
 from screens.recently_deleted_screen import RecentlyDeletedScreen
-from theme.theme_manager import theme_manager
 from kivy.core.window import Window
 
 # Tells Kivy to automatically resize the app's visible area so whatever
@@ -23,13 +22,7 @@ Window.softinput_mode = "below_target"
 
 class NoteNestApp(MDApp):
     def build(self):
-        # Must run before Builder.load_file / before any screen is
-        # created -- ThemedScreenMixin's on_kv_post calls apply_theme()
-        # the moment each screen is instantiated below, so the correct
-        # theme_name needs to already be set before that happens.
-        theme_manager.load_saved_theme()
-
-        create_tables()
+        create_tables() 
         self.title = "NoteNest"
         Builder.load_file("app.kv") #home screen, note home screen, note editor
         Builder.load_file("settings_screen.kv")

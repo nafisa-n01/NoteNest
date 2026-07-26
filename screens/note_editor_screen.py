@@ -117,16 +117,6 @@ class NoteEditorScreen(
         self._link_ref_counter = 0
         self._pending_link_selection = None
 
-    @staticmethod
-    def _faded(color, alpha):
-        # Returns the given RGBA color with its alpha channel replaced
-        # by `alpha`, producing a translucent/faded version of it --
-        # used for the text-selection highlight color below. Defined
-        # locally instead of relying on ThemedScreenMixin to provide
-        # this, since it turns out it doesn't actually have one.
-        r, g, b = color[0], color[1], color[2]
-        return (r, g, b, alpha)
-
     def on_kv_post(self, base_widget):
         super().on_kv_post(base_widget)
         self.ids.content_field.bind(selection_text=self._track_selection)
@@ -280,7 +270,7 @@ class NoteEditorScreen(
             elif part.strip():
                 label = Label(
                     text=self._convert_part_for_preview(part),
-                    markup=True, size_hint_y=None, color=theme_manager.get_color(TEXT_PRIMARY), #color=(0.29, 0.20, 0.15, 1), prev code
+                    markup=True, size_hint_y=None, color=(0.29, 0.20, 0.15, 1),
                     halign=self.ids.content_field.halign, valign="top",
                     font_size=self.ids.content_field.font_size,
                     font_name=self.ids.content_field.font_name,
