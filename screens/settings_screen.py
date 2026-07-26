@@ -23,14 +23,13 @@ class SettingsScreen(ThemedScreenMixin, MDScreen):
         "back_button":    ("icon_color", TEXT_PRIMARY),
 
         # Theme
-
+        "theme_card":          ("md_bg_color", CARD_PRIMARY),
         "theme_section_label": ("text_color", ACCENT),
         "cream_button":      ("md_bg_color", BUTTON),
         "dark_button":       ("md_bg_color", BUTTON),
         "default_button":    ("md_bg_color", BUTTON),
         "monochrome_button": ("md_bg_color", BUTTON),
         "matcha_button":     ("md_bg_color", BUTTON),
-
 
         # Google Account (identity only — sign in / sign out)
         "account_card":           ("md_bg_color", CARD_SECONDARY),
@@ -40,7 +39,7 @@ class SettingsScreen(ThemedScreenMixin, MDScreen):
         "logout_row_label":       ("text_color", TEXT_PRIMARY),
 
         # Backup & Restore (data actions — this is the backup_manager's UI surface)
-        "backup_card":          ("md_bg_color", CARD_SECONDARY),
+        "backup_card":          ("md_bg_color", CARD_PRIMARY),
         "backup_section_label": ("text_color", ACCENT),
         "backup_now_row_label":       ("text_color", TEXT_PRIMARY),
         "restore_row_label":          ("text_color", TEXT_PRIMARY),
@@ -57,7 +56,7 @@ class SettingsScreen(ThemedScreenMixin, MDScreen):
         "privacy_row_subtitle":  ("text_color", TEXT_SECONDARY),
 
         # Notifications
-        "notifications_card":          ("md_bg_color", CARD_SECONDARY),
+        "notifications_card":          ("md_bg_color", CARD_PRIMARY),
         "notifications_section_label": ("text_color", ACCENT),
         "notifications_row_label":     ("text_color", TEXT_PRIMARY),
 
