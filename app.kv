@@ -839,14 +839,10 @@
 <FormattingToolbar>:
     orientation: "vertical"
     theme_bg_color: "Custom"
+    md_bg_color: 0.91, 0.88, 0.97, 1
     size_hint_y: None
     height: dp(56) if root.is_compact else dp(48)
     padding: (dp(6), dp(4)) if root.is_compact else (dp(4), dp(2))
-    # Rounded corners + shadow only when floating at the bottom
-    # (mobile); flat/no-shadow when docked at the top (tablet), same
-    # as the rest of the docked header. Background color is no longer
-    # set here at all -- FormattingToolbar.apply_theme() now owns it
-    # in Python, so it actually tracks theme changes.
     radius: [20] if root.is_compact else [0]
     elevation: 4 if root.is_compact else 0
 
