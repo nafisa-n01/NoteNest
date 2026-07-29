@@ -31,23 +31,12 @@ class SettingsScreen(ThemedScreenMixin, MDScreen):
         "monochrome_button": ("md_bg_color", BUTTON),
         "matcha_button":     ("md_bg_color", BUTTON),
 
-        # Google Account (identity only — sign in / sign out)
-        "account_card":           ("md_bg_color", CARD_SECONDARY),
-        "account_section_label":  ("text_color", ACCENT),
-        "connect_google_row_label": ("text_color", TEXT_PRIMARY),
-        "connect_google_row_subtitle": ("text_color", TEXT_SECONDARY),
-        "logout_row_label":       ("text_color", TEXT_PRIMARY),
-
-        # Backup & Restore (data actions — this is the backup_manager's UI surface)
+        # Backup & Restore -- Export/Import only. App is fully offline;
+        # no Google account, no cloud backup/restore.
         "backup_card":          ("md_bg_color", CARD_PRIMARY),
         "backup_section_label": ("text_color", ACCENT),
-        "backup_now_row_label":       ("text_color", TEXT_PRIMARY),
-        "restore_row_label":          ("text_color", TEXT_PRIMARY),
-        "restore_row_subtitle":       ("text_color", TEXT_SECONDARY),
-        "auto_backup_row_label":      ("text_color", TEXT_PRIMARY),
-        "auto_backup_row_subtitle":   ("text_color", TEXT_SECONDARY),
-        "export_row_label":           ("text_color", TEXT_PRIMARY),
-        "import_row_label":           ("text_color", TEXT_PRIMARY),
+        "export_row_label":     ("text_color", TEXT_PRIMARY),
+        "import_row_label":     ("text_color", TEXT_PRIMARY),
 
         # Privacy
         "privacy_card":          ("md_bg_color", CARD_SECONDARY),
@@ -68,10 +57,6 @@ class SettingsScreen(ThemedScreenMixin, MDScreen):
         "footer_label":              ("text_color", TEXT_SECONDARY),
 
         # chevrons (row-tap affordance)
-        "connect_google_chevron": ("icon_color", TEXT_SECONDARY),
-        "logout_chevron":         ("icon_color", TEXT_SECONDARY),
-        "backup_now_chevron":     ("icon_color", TEXT_SECONDARY),
-        "restore_chevron":        ("icon_color", TEXT_SECONDARY),
         "export_chevron":         ("icon_color", TEXT_SECONDARY),
         "import_chevron":         ("icon_color", TEXT_SECONDARY),
         "privacy_chevron":        ("icon_color", TEXT_SECONDARY),
@@ -95,43 +80,19 @@ class SettingsScreen(ThemedScreenMixin, MDScreen):
     def set_matcha_theme(self):
         theme_manager.set_matcha_theme()
 
-    # ── google account (identity) ──
-    # Implemented in the backend roadmap's Phase 4 (services/auth_service.py).
-    def connect_google_account(self):
-        pass
-
-    def logout(self):
-        pass
-
-    # ── backup & restore (data) ──
-    # Implemented in Phase 3 (manual_export.py) and Phase 6
-    # (backup_manager.py, once auth + drive_client exist).
-    def backup_now(self):
-        pass
-
-    def restore_backup(self):
-        pass
-
-    def toggle_auto_backup(self):
-        pass
-
+    # ── backup: export/import only (offline app, no cloud) ──
     def export_to_file(self):
         # NOTE: the exported file is PLAIN, UNENCRYPTED JSON -- anyone
-        # with access to it can read every note it contains. This is a
-        # deliberate, known trade-off for now (encryption is planned
-        # for a later version) -- the confirmation dialog shown to the
-        # user should say this plainly before they choose where to
-        # save it.
+        # with access to it can read every note it contains.
         from services.manual_export import export_backup_to_file
 
         def on_success(file_path):
             print(f"Backup exported to {file_path}")
-            # TODO: replace with a real MDSnackbar/toast once the UI
-            # feedback pattern for this screen is decided.
+            # TODO: replace with real MDSnackbar/toast feedback.
 
         def on_error(exc):
             print(f"Export failed: {exc}")
-            # TODO: same as above -- user-visible error feedback.
+            # TODO: real user-visible error feedback.
 
         export_backup_to_file(on_success, on_error)
 
@@ -140,16 +101,12 @@ class SettingsScreen(ThemedScreenMixin, MDScreen):
 
         def on_success():
             print("Backup imported successfully.")
-            # TODO: replace with real UI feedback, and consider
-            # navigating back to Home / refreshing the currently
-            # visible Notes list, since the underlying data just
-            # changed out from under whatever screen the user returns to.
+            # TODO: real UI feedback, and consider refreshing/
+            # navigating away from any screen showing now-stale data.
 
         def on_error(exc):
             print(f"Import failed: {exc}")
-            # TODO: real UI feedback -- and for a RestoreError
-            # specifically, the message is already written to be
-            # shown to the user as-is (see restore_engine.py).
+            # TODO: real UI feedback.
 
         import_backup_from_file(on_success, on_error)
 
