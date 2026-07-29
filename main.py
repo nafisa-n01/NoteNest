@@ -24,7 +24,8 @@ class NoteNestApp(MDApp):
     def build(self):
         create_tables() 
         self.title = "NoteNest"
-        Builder.load_file("app.kv") #home screen, note home screen, note editor
+        Builder.load_file("home_screen.kv")  # Tabshira: DashboardTile, SmallTile, Streak, HomeScreen
+        Builder.load_file("notes.kv")  # Raidah: NoteCard, AttachmentThumbnail, NotesScreen, NoteEditorScreen, FormattingToolbar, RecentlyDeletedScreen
         Builder.load_file("settings_screen.kv")
         Builder.load_file("timer_screen.kv")
 
