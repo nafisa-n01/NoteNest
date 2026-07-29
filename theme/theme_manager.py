@@ -6,12 +6,12 @@
 from kivy.event import EventDispatcher
 from kivy.properties import StringProperty
 
-from theme.palettes import DEFAULT, DARK, CREAM, MATCHA, MONOCHROME
+from theme.palettes import DEFAULT, DARK, FLORAL, MATCHA, MONOCHROME
 
 _PALETTES = {
     "default": DEFAULT,
     "dark": DARK,
-    "cream": CREAM,
+    "floral": FLORAL,
     "matcha": MATCHA,
     "monochrome": MONOCHROME,
 }
@@ -31,8 +31,8 @@ class ThemeManager(EventDispatcher):
     def set_dark_theme(self):
         self.set_theme("dark")
 
-    def set_cream_theme(self):
-        self.set_theme("cream")
+    def set_floral_theme(self):
+        self.set_theme("floral")
 
     def set_matcha_theme(self):
         self.set_theme("matcha")

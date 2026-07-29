@@ -42,6 +42,11 @@
                 # ── theme card ──
                 MDCard:
                     id: theme_card
+                    theme_bg_color: "Custom"
+                    md_bg_color: 0, 0, 0, 0
+                    elevation: 0
+                    theme_shadow_color: "Custom"
+                    shadow_color: 0, 0, 0, 0
                     orientation: "vertical"
                     padding: dp(16)
                     spacing: dp(12)
@@ -84,11 +89,11 @@
                                     text: "Dark"
 
                             MDButton:
-                                id: cream_button
+                                id: floral_button
                                 style: "filled"
-                                on_release: root.set_cream_theme()
+                                on_release: root.set_floral_theme()
                                 MDButtonText:
-                                    text: "Cream"
+                                    text: "Floral"
 
                             MDButton:
                                 id: matcha_button
@@ -107,6 +112,7 @@
                 # ── backup & restore card: export/import only ──
                 MDCard:
                     id: backup_card
+                    theme_bg_color: "Custom"
                     orientation: "vertical"
                     padding: dp(16)
                     spacing: dp(14)
@@ -164,6 +170,7 @@
                 # ── privacy card ──
                 MDCard:
                     id: privacy_card
+                    theme_bg_color: "Custom"
                     orientation: "vertical"
                     padding: dp(16)
                     spacing: dp(12)
@@ -213,6 +220,7 @@
                 # ── notifications card ──
                 MDCard:
                     id: notifications_card
+                    theme_bg_color: "Custom"
                     orientation: "vertical"
                     padding: dp(16)
                     spacing: dp(12)
@@ -246,6 +254,7 @@
                 # ── about card ──
                 MDCard:
                     id: about_card
+                    theme_bg_color: "Custom"
                     orientation: "vertical"
                     padding: dp(16)
                     spacing: dp(12)
