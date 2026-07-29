@@ -8,7 +8,9 @@
 # That's what lets ThemeManager swap themes safely: it just looks up
 # the same token in a different dictionary.
 
-CREAM = {
+# This is the APP'S DEFAULT theme (formerly "Cream") — soft cream/tan
+# base with warm brown accents.
+DEFAULT = {
     "background":      "#FBF3E4",
     "card_primary":    "#F1E4D0",
     "card_secondary":  "#E8D8C0",
@@ -36,9 +38,9 @@ DARK = {
     "tile_accent_tasks":    "#7D9FD1",   # lighter navy/periwinkle, readable on dark card
 }
 
-# This is the APP'S DEFAULT theme (formerly "Floral") — periwinkle-
-# lavender base with soft pink/coral accents.
-DEFAULT = {
+# Floral theme (formerly the app's default) — periwinkle-lavender base
+# with soft pink/coral accents.
+FLORAL = {
     "background":      "#DCD6F5",
     "card_primary":    "#F8F5FC",
     "card_secondary":  "#F5C7DC",
@@ -48,8 +50,8 @@ DEFAULT = {
     "button":          "#D6567A",
     "text_primary":    "#4A3B6B",
     "button_text":     "#FFF9FC",
-    "tile_accent_pomodoro": "#6B9A5C",  
-    "tile_accent_tasks":    "#5C7FB0",   
+    "tile_accent_pomodoro": "#6B9A5C",
+    "tile_accent_tasks":    "#5C7FB0",
 }
 
 MONOCHROME = {
@@ -62,7 +64,7 @@ MONOCHROME = {
     "button":          "#E0E0E0",
     "text_primary":    "#FFFFFF",
     "button_text":     "#121212",
-    "tile_accent_pomodoro": "#B0B0B0",  
+    "tile_accent_pomodoro": "#B0B0B0",
     "tile_accent_tasks":    "#B0B0B0",
 }
 

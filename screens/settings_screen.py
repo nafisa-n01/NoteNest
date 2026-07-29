@@ -23,13 +23,12 @@ class SettingsScreen(ThemedScreenMixin, MDScreen):
         "back_button":    ("icon_color", TEXT_PRIMARY),
 
         # Theme
-        "theme_card":          ("md_bg_color", CARD_PRIMARY),
         "theme_section_label": ("text_color", ACCENT),
-        "cream_button":      ("md_bg_color", BUTTON),
-        "dark_button":       ("md_bg_color", BUTTON),
         "default_button":    ("md_bg_color", BUTTON),
-        "monochrome_button": ("md_bg_color", BUTTON),
+        "dark_button":       ("md_bg_color", BUTTON),
+        "floral_button":     ("md_bg_color", BUTTON),
         "matcha_button":     ("md_bg_color", BUTTON),
+        "monochrome_button": ("md_bg_color", BUTTON),
 
         # Backup & Restore -- Export/Import only. App is fully offline;
         # no Google account, no cloud backup/restore.
@@ -65,14 +64,14 @@ class SettingsScreen(ThemedScreenMixin, MDScreen):
     }
 
     # ── theme ──
-    def set_cream_theme(self):
-        theme_manager.set_cream_theme()
+    def set_default_theme(self):
+        theme_manager.set_default_theme()
 
     def set_dark_theme(self):
         theme_manager.set_dark_theme()
 
-    def set_default_theme(self):
-        theme_manager.set_default_theme()
+    def set_floral_theme(self):
+        theme_manager.set_floral_theme()
 
     def set_monochrome_theme(self):
         theme_manager.set_monochrome_theme()
