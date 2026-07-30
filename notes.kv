@@ -10,6 +10,17 @@
     elevation: 3
     md_bg_color: 0.97, 0.95, 0.90, 1
 
+    Widget:
+        id: category_stripe
+        size_hint_x: None
+        width: dp(4) if root.category_color else 0
+        canvas.before:
+            Color:
+                rgba: root.category_color if root.category_color else (0, 0, 0, 0)
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
     MDBoxLayout:
         orientation: "vertical"
         spacing: "6dp"
@@ -229,6 +240,22 @@
                         # Height/shape of the bar itself is unchanged.
                         padding: dp(10), dp(6), dp(10), dp(6)
                         on_text: root.search_notes(self.text)
+            
+            ScrollView:
+                id: category_filter_scroll
+                size_hint_y: None
+                height: dp(44)
+                do_scroll_x: True
+                do_scroll_y: False
+                bar_width: dp(2)
+
+                MDBoxLayout:
+                    id: category_filter_chips
+                    orientation: "horizontal"
+                    size_hint_x: None
+                    width: self.minimum_width
+                    padding: dp(12), dp(6)
+                    spacing: dp(8)
 
             ScrollView:
                 size_hint: 1, 1
@@ -383,6 +410,47 @@
                     # the Notes list search bar -- avoids reintroducing
                     # the earlier "top of capital letters clipped" bug.
                     padding: dp(10), dp(6), dp(10), dp(6)
+        
+        MDBoxLayout:
+            id: category_pill_row
+            size_hint_y: None
+            height: dp(44)
+            padding: dp(16), dp(4)
+
+            CategoryPillButton:
+                id: category_pill
+                orientation: "horizontal"
+                size_hint_x: None
+                width: self.minimum_width
+                padding: dp(14), dp(4)
+                on_release: app.root.get_screen('note_editor').open_category_picker()
+                canvas.before:
+                    Color:
+                        rgba: 0.92, 0.84, 0.66, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [18, 18, 18, 18]
+
+                # AnchorLayout guarantees true centering, same
+                # technique already used successfully in Tabshira's
+                # DashboardTile (icon_container) -- more reliable than
+                # relying on BoxLayout's default cross-axis behavior.
+                AnchorLayout:
+                    size_hint_y: 1
+                    size_hint_x: None
+                    width: category_pill_label.width
+                    anchor_x: "center"
+                    anchor_y: "center"
+
+                    MDLabel:
+                        id: category_pill_label
+                        text: "+ Add category"
+                        font_style: "Label"
+                        role: "small"
+                        theme_text_color: "Custom"
+                        text_color: 0.29, 0.20, 0.15, 1
+                        adaptive_size: True
 
         # ── live word/character count -- always visible regardless of
         #    whether search is open, not tied to any toggle ──

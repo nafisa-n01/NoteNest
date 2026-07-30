@@ -45,6 +45,9 @@ class NotesScreen(
         # Restore whichever view mode (list/grid) the user last chose,
         # instead of always starting back at the default.
         self.view_mode = user_prefs.get_pref("view_mode")
+        # Which category the notes list is currently filtered to --
+        # None means "show all notes".
+        self.selected_category_id = None
 
     def go_home(self):
         self.manager.current = "home"

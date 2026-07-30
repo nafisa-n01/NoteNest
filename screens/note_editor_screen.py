@@ -35,6 +35,7 @@ from screens.editor.link_mixin import HyperlinkMixin
 from screens.editor.export_mixin import ExportMixin
 from screens.editor.delete_mixin import DeleteConfirmationMixin
 from screens.editor.calculator import process_calculator_lines, format_calculated_number
+from screens.editor.category_mixin import CategoryMixin, CategoryPillButton  # noqa: F401
 
 # Material Design's standard "compact vs medium" width breakpoint --
 # below this, treat the device as a phone; at or above, a tablet.
@@ -50,6 +51,7 @@ class NoteEditorScreen(
     HyperlinkMixin,
     ExportMixin,
     DeleteConfirmationMixin,
+    CategoryMixin,
     MDScreen,
 ):
     current_note_id = None
@@ -102,6 +104,8 @@ class NoteEditorScreen(
         # NOTE: deliberately not binding on_kv_post here -- it fires
         # DURING super().__init__() above, before a bind placed here
         # would ever run. Overriding the method below is correct.
+        # Category assignment (CategoryMixin)
+        self._current_category_id = None
 
         # Undo/redo history (UndoRedoMixin)
         self._undo_stack = []
@@ -207,6 +211,7 @@ class NoteEditorScreen(
             field.font_name = DEFAULT_FONT_NAME
             field.font_size = DEFAULT_FONT_SIZE
             field.halign = DEFAULT_ALIGN
+            self._set_current_category(None)
             self._reset_editing_state()
         self.show_edit_mode()
 
@@ -229,6 +234,7 @@ class NoteEditorScreen(
             field.font_size = font_size
             field.halign = halign
 
+        self._set_current_category(note[8] if note is not None else None)
         self._reset_editing_state()
 
     def toggle_preview(self):
