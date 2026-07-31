@@ -7,6 +7,10 @@
 from kivy.clock import Clock
 from kivy.metrics import dp
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.modalview import ModalView
+from kivymd.uix.card import MDCard
+from kivymd.uix.label import MDLabel
+from kivymd.uix.button import MDButton, MDButtonText
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
@@ -35,6 +39,8 @@ from screens.editor.link_mixin import HyperlinkMixin
 from screens.editor.export_mixin import ExportMixin
 from screens.editor.delete_mixin import DeleteConfirmationMixin
 from screens.editor.calculator import process_calculator_lines, format_calculated_number
+from screens.editor.category_mixin import CategoryMixin, CategoryPillButton  # noqa: F401
+from screens.editor.delete_mixin import DeleteConfirmationMixin
 
 # Material Design's standard "compact vs medium" width breakpoint --
 # below this, treat the device as a phone; at or above, a tablet.
@@ -50,6 +56,7 @@ class NoteEditorScreen(
     HyperlinkMixin,
     ExportMixin,
     DeleteConfirmationMixin,
+    CategoryMixin,
     MDScreen,
 ):
     current_note_id = None
@@ -102,6 +109,8 @@ class NoteEditorScreen(
         # NOTE: deliberately not binding on_kv_post here -- it fires
         # DURING super().__init__() above, before a bind placed here
         # would ever run. Overriding the method below is correct.
+        # Category assignment (CategoryMixin)
+        self._current_category_id = None
 
         # Undo/redo history (UndoRedoMixin)
         self._undo_stack = []
@@ -117,6 +126,10 @@ class NoteEditorScreen(
         self._preview_link_map = {}
         self._link_ref_counter = 0
         self._pending_link_selection = None
+        # Snapshot of (title, content, font, size, align, category) at
+        # the moment a note was loaded or last saved -- compared
+        # against the live state to detect unsaved changes on exit.
+        self._loaded_snapshot = None
 
     def on_kv_post(self, base_widget):
         super().on_kv_post(base_widget)
@@ -146,6 +159,22 @@ class NoteEditorScreen(
             toolbar.parent.remove_widget(toolbar)
         target.add_widget(toolbar)
         toolbar.is_compact = compact
+
+    def _current_snapshot(self):
+        field = self.ids.content_field
+        return (
+            self.ids.title_field.text,
+            field.text,
+            field.font_name,
+            field.font_size,
+            field.halign,
+            self._current_category_id,
+        )
+
+    def _has_unsaved_changes(self):
+        if self._loaded_snapshot is None:
+            return False
+        return self._current_snapshot() != self._loaded_snapshot
 
     def on_theme_applied(self):
         field = self.ids.get("content_field")
@@ -207,7 +236,9 @@ class NoteEditorScreen(
             field.font_name = DEFAULT_FONT_NAME
             field.font_size = DEFAULT_FONT_SIZE
             field.halign = DEFAULT_ALIGN
+            self._set_current_category(None)
             self._reset_editing_state()
+            self._loaded_snapshot = self._current_snapshot()
         self.show_edit_mode()
 
     def load_note(self, note_id):
@@ -229,7 +260,9 @@ class NoteEditorScreen(
             field.font_size = font_size
             field.halign = halign
 
+        self._set_current_category(note[8] if note is not None else None)
         self._reset_editing_state()
+        self._loaded_snapshot = self._current_snapshot()
 
     def toggle_preview(self):
         self.is_preview = not self.is_preview
@@ -331,6 +364,7 @@ class NoteEditorScreen(
             update_notes(self.current_note_id, title, content_to_store)
             self._cleanup_removed_attachments(content)
 
+        self._loaded_snapshot = self._current_snapshot()
         self.go_back()
 
     def duplicate_note(self):
@@ -339,11 +373,70 @@ class NoteEditorScreen(
         self.go_back()
 
     def go_back(self):
+        # Actual navigation, used once we've confirmed it's OK to
+        # leave (either nothing changed, or the user chose Discard).
         self.ids.title_field.text = ""
         self.ids.content_field.text = ""
         self.current_note_id = None
         self.is_preview = False
         self.manager.current = "notes"
+
+    def request_go_back(self):
+        # Called from the back button in KV instead of go_back()
+        # directly -- checks for unsaved changes first.
+        if self._has_unsaved_changes():
+            self._show_unsaved_changes_prompt()
+        else:
+            self.go_back()
+
+    def _show_unsaved_changes_prompt(self):
+        card = MDCard(
+            orientation="vertical", padding=dp(20), spacing=dp(16),
+            radius=[16], size_hint=(None, None), size=(dp(340), dp(180)),
+            theme_bg_color="Custom", md_bg_color=(0.97, 0.95, 0.90, 1),
+        )
+
+        warning_label = MDLabel(
+            text="You have unsaved changes. Save before leaving?",
+            halign="center", theme_text_color="Custom", size_hint_y=None,
+        )
+        warning_label.bind(width=lambda inst, val: setattr(inst, "text_size", (val, None)))
+        warning_label.bind(texture_size=lambda inst, val: setattr(inst, "height", val[1]))
+        card.add_widget(warning_label)
+
+        button_row = BoxLayout(orientation="horizontal", spacing=dp(8), size_hint_y=None, height=dp(48))
+
+        # size_hint_x=1 on all three forces them to share the row's
+        # fixed width equally instead of each sizing to its own label
+        # -- without this, three buttons' combined natural width
+        # exceeded the card's available space and Save got pushed
+        # past the right edge instead of shrinking to fit.
+        cancel_button = MDButton(MDButtonText(text="Cancel"), style="outlined", size_hint_x=1)
+        cancel_button.bind(on_release=lambda *_: modal.dismiss())
+
+        discard_button = MDButton(MDButtonText(text="Discard"), style="outlined", size_hint_x=1)
+        def _on_discard(*_):
+            modal.dismiss()
+            self.go_back()
+        discard_button.bind(on_release=_on_discard)
+
+        save_button = MDButton(MDButtonText(text="Save"), style="filled", size_hint_x=1)
+        def _on_save(*_):
+            modal.dismiss()
+            self.save_note()
+        save_button.bind(on_release=_on_save)
+
+        button_row.add_widget(cancel_button)
+        button_row.add_widget(discard_button)
+        button_row.add_widget(save_button)
+        card.add_widget(button_row)
+
+        modal = ModalView(
+            size_hint=(None, None), size=(dp(340), dp(180)),
+            auto_dismiss=True, background_color=(0, 0, 0, 0.5),
+        )
+        modal.add_widget(card)
+        modal.open()
 
     def _refresh_preview_if_active(self):
         if self.is_preview:

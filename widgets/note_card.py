@@ -1,6 +1,6 @@
 # widgets/note_card.py
 from kivymd.uix.card import MDCard
-from kivy.properties import StringProperty, NumericProperty, BooleanProperty
+from kivy.properties import StringProperty, NumericProperty, BooleanProperty, ObjectProperty
 
 from theme.theme_manager import theme_manager
 from theme.palettes import CARD_PRIMARY, TEXT_PRIMARY, TEXT_SECONDARY, ACCENT
@@ -18,6 +18,7 @@ class NoteCard(MDCard):
     selection_mode = BooleanProperty(False)
     grid_mode = BooleanProperty(False)
     is_selected = BooleanProperty(False)
+    category_color = ObjectProperty(None, allownone=True)
 
     def apply_theme(self):
         
