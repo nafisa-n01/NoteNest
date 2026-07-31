@@ -47,6 +47,8 @@
 
             MDBoxLayout:
                 orientation: "vertical"
+                size_hint_y: None
+                adaptive_height: True
                 spacing: dp(3)
                 pos_hint: {"center_y": 0.5}
 
@@ -69,7 +71,8 @@
                     theme_text_color: "Custom"
                     font_style: "Body"
                     role: "small"
-                    adaptive_height: True
+                    size_hint_y: None
+                    height: self.texture_size[1] if self.text else 0
                     text_size: self.width, None
                     shorten: True
                     shorten_from: 'right'
@@ -78,6 +81,8 @@
         MDBoxLayout:
             orientation: "vertical"
             size_hint_x: None
+            size_hint_y: None
+            adaptive_height: True
             width: dp(60)
             spacing: dp(0)
             pos_hint: {"center_y": 0.5}
@@ -206,6 +211,7 @@
 
         # ── hero tile: Up next ──
         MDLabel:
+            id: next_up_label
             text: "Next Up"
             theme_text_color: "Custom"
             font_style: "Title"
@@ -222,6 +228,7 @@
 
         # ── Today's Plan ──
         MDLabel:
+            id: todays_plan_label
             text: "Today's Plan"
             theme_text_color: "Custom"
             font_style: "Title"
@@ -241,3 +248,17 @@
                 id: today_plan_list
                 orientation: "vertical"
                 spacing: dp(6)
+
+        AnchorLayout:
+            anchor_x: "right"
+            anchor_y: "bottom"
+            size_hint_y: None
+            height: dp(64)
+
+            MDIconButton:
+                id: quick_add_fab
+                icon: "plus"
+                theme_icon_color: "Custom"
+                size_hint: None, None
+                size: dp(56), dp(56)
+                on_release: root.open_quick_add()
