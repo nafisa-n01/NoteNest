@@ -43,7 +43,8 @@ def create_tables():
             is_archived INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            category_id INTEGER REFERENCES categories(id)
+            category_id INTEGER REFERENCES categories(id),
+            task_id INTEGER REFERENCES tasks(id)
         )
             ''')
     cursor.execute('''
@@ -53,7 +54,9 @@ def create_tables():
             priority text,
             is_completed INTEGER DEFAULT 0,
             due_date date,
-            user_id INTEGER REFERENCES users(id)   
+            user_id INTEGER REFERENCES users(id),  
+            category_id INTEGER REFERENCES categories(id),
+            activity_type text DEFAULT 'task'
         )
             ''')
     cursor.execute('''
@@ -73,6 +76,15 @@ def create_tables():
         )
             ''')
     
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pomodoro_sessions(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER REFERENCES tasks(id),
+            started_at TIMESTAMP,
+            completed INTEGER DEFAULT 0,
+            duration INTEGER
+        )
+            ''')
     conn.commit()
     conn.close()
     
