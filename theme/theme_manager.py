@@ -7,6 +7,7 @@ from kivy.event import EventDispatcher
 from kivy.properties import StringProperty
 
 from theme.palettes import DEFAULT, DARK, FLORAL, MATCHA, MONOCHROME
+from theme.theme_store import save_theme, load_theme
 
 _PALETTES = {
     "default": DEFAULT,
@@ -21,9 +22,33 @@ class ThemeManager(EventDispatcher):
 
     theme_name = StringProperty("default")
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Persists to SQLite whenever theme_name changes, for any
+        # reason -- a button press via set_theme(), or a future
+        # programmatic change. One shared hook guarantees the saved
+        # value always matches whatever's actually active.
+        self.bind(theme_name=self._save_theme_name)
+
     def set_theme(self, name):
         if name in _PALETTES:
             self.theme_name = name
+
+    def load_saved_theme(self):
+        """
+        Reads the last-saved theme from the SQLite database and
+        applies it. Call this once, after create_tables() has run
+        (see main.py), so the database file already exists. If
+        nothing was ever saved, or the saved value isn't a known
+        theme, this silently does nothing and the app keeps whatever
+        theme_name already started with ("default").
+        """
+        saved_name = load_theme()
+        if saved_name in _PALETTES:
+            self.theme_name = saved_name
+
+    def _save_theme_name(self, instance, value):
+        save_theme(value)
 
     def set_default_theme(self):
         self.set_theme("default")

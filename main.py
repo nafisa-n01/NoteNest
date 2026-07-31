@@ -13,6 +13,7 @@ from screens.timer_screen import TimerScreen
 from screens.calendar_screen import CalendarScreen
 from database.db import create_tables
 from screens.recently_deleted_screen import RecentlyDeletedScreen
+from theme.theme_manager import theme_manager
 from kivy.core.window import Window
 
 from theme.theme_manager import theme_manager
@@ -49,6 +50,13 @@ class RootLayout(MDBoxLayout):
 class NoteNestApp(MDApp):
     def build(self):
         create_tables()
+        # Must run after create_tables() (so the database file
+        # already exists) and before any screen is built -- screens
+        # apply their theme the moment they're created below, so the
+        # correct theme_name needs to already be set first.
+
+        theme_manager.load_saved_theme()
+        
         self.title = "NoteNest"
         Builder.load_file("home_screen.kv")  # Tabshira: DashboardTile, SmallTile, HomeScreen
         Builder.load_file("notes.kv")  # Raidah: NoteCard, AttachmentThumbnail, NotesScreen, NoteEditorScreen, FormattingToolbar, RecentlyDeletedScreen
