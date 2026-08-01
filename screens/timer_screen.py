@@ -8,6 +8,8 @@ from kivymd.uix.dialog import (
 )
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.label import MDLabel
+from kivymd.uix.scrollview import MDScrollView
 
 from kivy.clock import Clock
 from kivy.app import App
@@ -25,6 +27,9 @@ from theme.palettes import (
     BUTTON,
 )
 
+from database.pomodoro_queries import create_pomodoro_session, complete_pomodoro_session
+from services.session_history import get_sessions_for_today
+
 
 class PomodoroTimer:
     def __init__(self):
@@ -38,9 +43,6 @@ class PomodoroTimer:
 
         self._event = None
 
-        # How many focus sessions have finished this cycle, and how
-        # many are allowed before the whole cycle stops and waits for
-        # the user to explicitly start a new one.
         self.completed_focus_sessions = 0
         self.max_focus_sessions = 2
         self.cycle_finished = False
@@ -69,11 +71,6 @@ class PomodoroTimer:
             self.remaining = self.work_duration
 
     def start_new_cycle(self):
-        """
-        Called once the user chooses to begin a fresh cycle after
-        the focus-session cap was reached — resets the count and
-        starts a brand new first focus session immediately.
-        """
         self.completed_focus_sessions = 0
         self.cycle_finished = False
         self.is_break = False
@@ -110,13 +107,9 @@ class PomodoroTimer:
 
     def switch_session(self):
         if not self.is_break:
-            # A focus/work session just finished.
             self.completed_focus_sessions += 1
 
             if self.completed_focus_sessions >= self.max_focus_sessions:
-                # Cap reached — stop here instead of looping into
-                # another break. The cycle stays stopped until the
-                # user explicitly starts a new one.
                 self.is_running = False
                 self.cycle_finished = True
                 self.remaining = self.work_duration
@@ -167,6 +160,7 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
         "subtitle_label": ("text_color", TEXT_SECONDARY),
 
         "back_button": ("icon_color", TEXT_PRIMARY),
+        "history_button": ("icon_color", TEXT_PRIMARY),
 
         "timer_label": ("text_color", TEXT_PRIMARY),
 
@@ -185,17 +179,10 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
         self.timer = PomodoroTimer()
         self.dialog = None
 
-        # Remembers the mode from the previous refresh tick, so we can
-        # detect the exact moment work/break flips (a "transition").
         self._last_is_break = self.timer.is_break
-
-        # Same idea, for detecting the moment the whole cycle stops.
         self._last_cycle_finished = self.timer.cycle_finished
-
-        # Holds the currently scheduled "clear the status message" timer,
-        # if one is pending, so we can cancel it if a new message arrives
-        # before the old one finishes.
         self._status_clear_event = None
+        self._current_session_id = None
 
         Clock.schedule_interval(self.refresh_ui, 0.2)
 
@@ -204,11 +191,7 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
 
         self.ids.session_label.text = self.timer.get_session()
 
-        total_minutes = self.timer.get_total_for_current_session() // 60
-
-        self.ids.session_sub_label.text = (
-            f"{total_minutes} minute session"
-        )
+        self._update_session_sub_label()
 
         if "hourglass" in self.ids:
             self.ids.hourglass.progress = self.timer.get_progress_fraction()
@@ -219,47 +202,65 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
             else "play"
         )
 
-        # Detect work/break transitions by comparing against last tick.
         if self.timer.is_break != self._last_is_break:
             self._on_session_transitioned()
             self._last_is_break = self.timer.is_break
 
-        # Detect the moment the whole cycle stops (focus-session cap hit).
         if self.timer.cycle_finished and not self._last_cycle_finished:
+            self._complete_current_focus_session()
             self._show_status_message(
                 "Nice work! Start another session when you're ready.",
                 duration=None,
             )
             self._last_cycle_finished = True
 
+    def _update_session_sub_label(self):
+        total_minutes = self.timer.get_total_for_current_session() // 60
+
+        if self.timer.cycle_finished:
+            self.ids.session_sub_label.text = "Cycle complete"
+        elif self.timer.is_break:
+            self.ids.session_sub_label.text = f"{total_minutes} minute break"
+        else:
+            current_session_number = self.timer.completed_focus_sessions + 1
+            self.ids.session_sub_label.text = (
+                f"{total_minutes} minute session \u00b7 "
+                f"Session {current_session_number} of {self.timer.max_focus_sessions}"
+            )
+
+    def _start_new_focus_session_if_fresh(self):
+        if (
+            self._current_session_id is None
+            and not self.timer.is_break
+            and self.timer.remaining == self.timer.work_duration
+        ):
+            self._current_session_id = create_pomodoro_session(
+                task_id=None,
+                duration=self.timer.work_duration,
+            )
+
+    def _complete_current_focus_session(self):
+        if self._current_session_id is not None:
+            complete_pomodoro_session(self._current_session_id)
+            self._current_session_id = None
+
     def _on_session_transitioned(self):
-        """
-        Called once, right when the timer flips between work and break.
-        Picks a short, friendly status message for the new mode.
-        """
         if self.timer.is_break:
+            self._complete_current_focus_session()
             message = "Study/Work session over."
         else:
+            self._start_new_focus_session_if_fresh()
             message = "Break time over. Time to start focusing again."
 
         self._show_status_message(message)
 
     def _show_status_message(self, message, duration=4):
-        """
-        Displays a status message. Pass duration=None for a message
-        that stays until explicitly cleared (used for the "cycle
-        finished" prompt); otherwise it auto-clears after `duration`
-        seconds. Safe to call even before the .kv file defines a
-        "status_label" widget.
-        """
         status_label = self.ids.get("status_label")
         if status_label is None:
             return
 
         status_label.text = message
 
-        # Cancel any pending clear so an old message can't wipe out
-        # a newer one that arrived shortly after.
         if self._status_clear_event is not None:
             self._status_clear_event.cancel()
             self._status_clear_event = None
@@ -277,8 +278,8 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
 
     def toggle_timer(self):
         if self.timer.cycle_finished:
-            # Cap was reached — pressing play starts a brand new cycle.
             self.timer.start_new_cycle()
+            self._start_new_focus_session_if_fresh()
             self._last_cycle_finished = False
             self._clear_status_message()
             return
@@ -289,6 +290,7 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
             self.start_timer()
 
     def start_timer(self):
+        self._start_new_focus_session_if_fresh()
         self.timer.start()
 
     def pause_timer(self):
@@ -296,6 +298,7 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
 
     def reset_timer(self):
         self.timer.reset()
+        self._current_session_id = None
         self._last_cycle_finished = False
         self._clear_status_message()
 
@@ -308,6 +311,97 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
         if hourglass is not None:
             hourglass.glass_color = theme_manager.get_color(TEXT_SECONDARY)
             hourglass.sand_color = theme_manager.get_color(BUTTON)
+
+    # ── session history popup ──
+
+    def open_session_history(self):
+        """
+        Shows every pomodoro session started today, most recent first,
+        or "No sessions today" if there aren't any. Rebuilt fresh on
+        every open (not cached like open_timer_dialog's dialog) so it
+        always reflects the latest sessions and current theme colors.
+        """
+        sessions = get_sessions_for_today()
+
+        content = MDBoxLayout(
+            orientation="vertical",
+            spacing="10dp",
+            size_hint_y=None,
+            adaptive_height=True,
+        )
+        content.bind(minimum_height=content.setter("height"))
+
+        if not sessions:
+            content.add_widget(
+                MDLabel(
+                    text="No sessions today",
+                    halign="center",
+                    theme_text_color="Custom",
+                    text_color=theme_manager.get_color(TEXT_SECONDARY),
+                    size_hint_y=None,
+                    height="40dp",
+                )
+            )
+        else:
+            for _session_id, started_at, completed, duration in sessions:
+                content.add_widget(
+                    self._build_session_row(started_at, completed, duration)
+                )
+
+        scroll = MDScrollView(size_hint=(1, None), height="300dp")
+        scroll.add_widget(content)
+
+        history_dialog = MDDialog(
+            MDDialogHeadlineText(text="Today's Sessions"),
+            MDDialogContentContainer(scroll, orientation="vertical"),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Close"),
+                    on_release=lambda x: history_dialog.dismiss(),
+                ),
+            ),
+        )
+        history_dialog.open()
+
+    def _build_session_row(self, started_at, completed, duration):
+        # started_at is stored as "YYYY-MM-DD HH:MM:SS" -- just the
+        # HH:MM portion is what's useful to show here.
+        time_display = started_at.split(" ")[1][:5] if " " in started_at else started_at
+        duration_minutes = duration // 60 if duration else 0
+        status_text = "Completed" if completed else "Incomplete"
+        status_color = theme_manager.get_color(
+            TEXT_PRIMARY if completed else TEXT_SECONDARY
+        )
+
+        row = MDBoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height="36dp",
+            spacing="8dp",
+        )
+
+        row.add_widget(MDLabel(
+            text=time_display,
+            theme_text_color="Custom",
+            text_color=theme_manager.get_color(TEXT_PRIMARY),
+            size_hint_x=None,
+            width="60dp",
+        ))
+        row.add_widget(MDLabel(
+            text=f"{duration_minutes} min",
+            theme_text_color="Custom",
+            text_color=theme_manager.get_color(TEXT_SECONDARY),
+        ))
+        row.add_widget(MDLabel(
+            text=status_text,
+            halign="right",
+            theme_text_color="Custom",
+            text_color=status_color,
+        ))
+
+        return row
+
+    # ── timer settings dialog ──
 
     def open_timer_dialog(self):
 
