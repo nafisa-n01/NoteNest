@@ -61,6 +61,7 @@ class NoteNestApp(MDApp):
         Builder.load_file("notes.kv")  # Raidah: NoteCard, AttachmentThumbnail, NotesScreen, NoteEditorScreen, FormattingToolbar, RecentlyDeletedScreen
         Builder.load_file("settings_screen.kv")
         Builder.load_file("timer_screen.kv")
+        Builder.load_file("calendar_screen.kv")
 
         self.sm = ScreenManager()
         self.sm.add_widget(HomeScreen(name="home"))

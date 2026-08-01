@@ -12,6 +12,7 @@ import json
 import os
 import tempfile
 
+from database.calendar_queries import create_calendar_events_table, create_event
 import database.db as db
 from database.category_queries import create_category
 from database.notes_queries import create_notes
@@ -127,6 +128,15 @@ def _populate_reminders(reminders, task_id_map):
             continue
         create_reminder(new_task_id, reminder["remind_at"])
 
+def _populate_calendar_events(events):
+    for event in events:
+        create_event(
+            user_id=event.get("user_id", 1),
+            title=event["title"],
+            event_date=event["event_date"],
+            event_time=event.get("event_time"),
+            event_link=event.get("event_link"),
+        )
 
 def _populate_attachments(attachments, note_id_map):
     for attachment in attachments:
@@ -187,11 +197,13 @@ def restore_from_manifest(manifest):
     try:
         with _temporary_database(temp_path):
             db.create_tables()
+            create_calendar_events_table()
 
             category_id_map = _populate_categories(data.get("categories", []))
             note_id_map = _populate_notes(data.get("notes", []), category_id_map)
             task_id_map = _populate_tasks(data.get("tasks", []))
             _populate_reminders(data.get("reminders", []), task_id_map)
+            _populate_calendar_events(data.get("calendar_events", []))
             _populate_attachments(data.get("attachments", []), note_id_map)
             _populate_trash(data.get("trash", []), category_id_map)
 
