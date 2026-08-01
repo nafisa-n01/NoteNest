@@ -2,7 +2,7 @@
     theme_bg_color: "Custom"
     size_hint_x: 1
     size_hint_y: None
-    height: dp(110)
+    height: dp(92)
     radius: [18]
     ripple_behavior: True
     elevation: 1
@@ -11,7 +11,7 @@
 
     MDBoxLayout:
         orientation: "horizontal"
-        padding: dp(18), dp(14)
+        padding: dp(16), dp(12)
         spacing: dp(14)
 
         AnchorLayout:
@@ -47,6 +47,8 @@
 
             MDBoxLayout:
                 orientation: "vertical"
+                size_hint_y: None
+                adaptive_height: True
                 spacing: dp(3)
                 pos_hint: {"center_y": 0.5}
 
@@ -69,7 +71,8 @@
                     theme_text_color: "Custom"
                     font_style: "Body"
                     role: "small"
-                    adaptive_height: True
+                    size_hint_y: None
+                    height: self.texture_size[1] if self.text else 0
                     text_size: self.width, None
                     shorten: True
                     shorten_from: 'right'
@@ -78,6 +81,8 @@
         MDBoxLayout:
             orientation: "vertical"
             size_hint_x: None
+            size_hint_y: None
+            adaptive_height: True
             width: dp(60)
             spacing: dp(0)
             pos_hint: {"center_y": 0.5}
@@ -152,92 +157,111 @@
 
 
 <HomeScreen>:
-    MDBoxLayout:
-        id: drawer_layout
-        orientation: "vertical"
-        padding: dp(20), dp(16), dp(20), dp(24)
-        spacing: dp(16)
 
-        # ── top row: greeting + settings ──
-        MDBoxLayout:
-            orientation: "horizontal"
-            size_hint_y: None
-            adaptive_height: True
+    FloatLayout:
+
+        ScrollView:
+            size_hint: 1, 1
 
             MDBoxLayout:
+                id: drawer_layout
                 orientation: "vertical"
+                size_hint_y: None
+                adaptive_height: True
+                padding: dp(20), dp(16), dp(20), dp(24)
+                spacing: dp(16)
 
-                MDLabel:
-                    id: date_label
-                    text: ""
-                    theme_text_color: "Custom"
-                    font_style: "Body"
-                    role: "small"
+                # ── top row: greeting + settings ──
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
                     adaptive_height: True
-                    text_size: self.width, None
-                    shorten: True
-                    shorten_from: 'right'
 
+                    MDBoxLayout:
+                        orientation: "vertical"
+
+                        MDLabel:
+                            id: date_label
+                            text: ""
+                            theme_text_color: "Custom"
+                            font_style: "Body"
+                            role: "small"
+                            adaptive_height: True
+                            text_size: self.width, None
+                            shorten: True
+                            shorten_from: 'right'
+
+                        MDLabel:
+                            id: greeting_label
+                            text: "Good evening"
+                            theme_text_color: "Custom"
+                            font_style: "Title"
+                            role: "large"
+                            adaptive_height: True
+                            text_size: self.width, None
+                            shorten: True
+                            shorten_from: 'right'
+
+                    MDIconButton:
+                        id: menu_button
+                        icon: "cog-outline"
+                        theme_icon_color: "Custom"
+                        pos_hint: {"center_y": 0.5}
+                        on_release: root.open_settings()
+        
+                 # ── Continue Studying (only shown when there's an active session) ──
+                MDBoxLayout:
+                    id: continue_studying_container
+                    orientation: "vertical"
+                    spacing: dp(16)
+                    size_hint_y: None
+                    adaptive_height: True
+
+                # ── hero tile: Up next ──
                 MDLabel:
-                    id: greeting_label
-                    text: "Good evening"
+                    id: next_up_label
+                    text: "Next Up"
                     theme_text_color: "Custom"
                     font_style: "Title"
-                    role: "large"
+                    role: "small"
                     adaptive_height: True
-                    text_size: self.width, None
-                    shorten: True
-                    shorten_from: 'right'
 
-            MDIconButton:
-                id: menu_button
-                icon: "cog-outline"
-                theme_icon_color: "Custom"
-                pos_hint: {"center_y": 0.5}
-                on_release: root.open_settings()
-        
-         # ── Continue Studying (only shown when there's an active session) ──
-        MDBoxLayout:
-            id: continue_studying_container
-            orientation: "vertical"
-            spacing: dp(16)
-            size_hint_y: None
-            adaptive_height: True
+                DashboardTile:
+                    id: up_next_tile
+                    label: ""
+                    subtitle: ""
+                    icon_name: "calendar-clock-outline"
 
-        # ── hero tile: Up next ──
-        MDLabel:
-            text: "Next Up"
-            theme_text_color: "Custom"
-            font_style: "Title"
-            role: "small"
-            adaptive_height: True
+                # ── Today's Plan ──
+                MDLabel:
+                    id: todays_plan_label
+                    text: "Today's Plan"
+                    theme_text_color: "Custom"
+                    font_style: "Title"
+                    role: "small"
+                    adaptive_height: True
 
-        DashboardTile:
-            id: up_next_tile
-            label: ""
-            subtitle: ""
-            icon_name: "calendar-clock-outline"
+                MDCard:
+                    id: today_plan_card
+                    theme_bg_color: "Custom"
+                    radius: [16]
+                    elevation: 0
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: dp(14)
 
-        Widget:
+                    MDBoxLayout:
+                        id: today_plan_list
+                        orientation: "vertical"
+                        spacing: dp(6)
+                        size_hint_y: None
+                        adaptive_height: True
 
-        # ── Today's Plan ──
-        MDLabel:
-            text: "Today's Plan"
-            theme_text_color: "Custom"
-            font_style: "Title"
-            role: "small"
-            adaptive_height: True
-
-        MDCard:
-            id: today_plan_card
-            theme_bg_color: "Custom"
-            radius: [16]
-            elevation: 0
-            size_hint_y: None
-            height: today_plan_list.height + dp(28)
-            padding: dp(14)
-
-            MDBoxLayout:
-                id: today_plan_list
-                orientation: "vertical"
-                spacing: dp(6)
+        MDIconButton:
+            id: quick_add_fab
+            icon: "plus"
+            theme_icon_color: "Custom"
+            size_hint: None, None
+            size: dp(56), dp(56)
+            pos_hint: {"right": 0.97, "y": 0.03}
+            on_release: root.open_quick_add()    

@@ -6,6 +6,8 @@ def get_today_tasks(user_id, today_date):
     Powers the Home screen 'Today's Plan' list.
     today_date should be a string 'YYYY-MM-DD' -- matched against the
     date portion of due_date (which now stores 'YYYY-MM-DD HH:MM').
+    Only shows unfinished tasks/events -- completed ones drop off Home
+    once checked off (they're still visible on the Calendar screen).
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -19,7 +21,7 @@ def get_today_tasks(user_id, today_date):
                 WHERE pomodoro_sessions.task_id = tasks.id AND completed=1) as pomodoro_completed
         FROM tasks
         LEFT JOIN categories ON tasks.category_id = categories.id
-        WHERE tasks.user_id=? AND tasks.due_date LIKE ?
+        WHERE tasks.user_id=? AND tasks.due_date LIKE ? AND tasks.is_completed=0
         ORDER BY tasks.due_date ASC
     ''', (user_id, f"{today_date}%"))
 
@@ -136,33 +138,53 @@ def get_continue_studying(user_id):
         "session_id": row[2],
         "started_at": row[3],
     }
-    
-    
+
+
 def get_next_event(user_id):
-    """
-    Powers the Home screen 'Next Up' tile. Finds the soonest upcoming
-    event (not study sessions or plain tasks) whose due_date hasn't
-    passed yet.
-    """
     conn = get_connection()
     cursor = conn.cursor()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     cursor.execute('''
-        SELECT id, title, due_date, category_id
+        SELECT id, title, due_date, due_time, category_id
         FROM tasks
-        WHERE user_id=? AND activity_type='event' AND due_date >= ?
-        ORDER BY due_date ASC
+        WHERE user_id=? AND activity_type='event' AND is_completed=0
+          AND (due_date || ' ' || COALESCE(due_time, '23:59')) >= ?
+        ORDER BY due_date ASC, COALESCE(due_time, '23:59') ASC
         LIMIT 1
     ''', (user_id, now_str))
     row = cursor.fetchone()
     conn.close()
-
     if row is None:
         return None
-
     return {
-        "id": row[0],
-        "title": row[1],
-        "due_date": row[2],
-        "category_id": row[3],
+        "id": row[0], "title": row[1],
+        "due_date": row[2], "due_time": row[3],
+        "category_id": row[4],
     }
+
+def create_study_task(user_id, title, duration):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    time = datetime.now().strftime("%H:%M")
+
+    cursor.execute("""
+        INSERT INTO tasks
+        (
+            user_id,
+            title,
+            due_date,
+            due_time,
+            activity_type,
+            priority,
+            is_completed
+        ) VALUES (?, ?, ?, ?, 'study', 'medium', 0)
+    """, (user_id, title, today, time))
+
+    task_id = cursor.lastrowid
+
+    conn.commit()
+    conn.close()
+
+    return task_id
