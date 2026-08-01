@@ -49,14 +49,19 @@ def create_tables():
             ''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tasks(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title text not null,
-            priority text,
-            is_completed INTEGER DEFAULT 0,
-            due_date date,
-            user_id INTEGER REFERENCES users(id),  
-            category_id INTEGER REFERENCES categories(id),
-            activity_type text DEFAULT 'task'
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        priority TEXT,
+        is_completed INTEGER DEFAULT 0,
+        due_date TEXT,
+        due_time TEXT,
+        user_id INTEGER REFERENCES users(id),
+        category_id INTEGER REFERENCES categories(id),
+        activity_type TEXT DEFAULT 'task',
+        link TEXT,
+        carry_forward INTEGER DEFAULT 0,
+        notify_enabled INTEGER DEFAULT 0,
+        original_due_date TEXT
         )
             ''')
     cursor.execute('''

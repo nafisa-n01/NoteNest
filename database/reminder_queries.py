@@ -42,16 +42,19 @@ def get_due_reminders():     #upcoming active reminders
     reminders=cursor.fetchall()
     conn.close()
     return reminders
-def get_triggered_reminders():   #call this to fire notification
+def get_triggered_reminders():   # call this to fire notification
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT * FROM reminders
-        WHERE is_active=1
-        and remind_at<=CURRENT_TIMESTAMP
-        ORDER BY remind_at ASC
+        SELECT reminders.id, reminders.task_id, reminders.remind_at, reminders.is_active,
+               tasks.title, tasks.due_date, tasks.due_time
+        FROM reminders
+        JOIN tasks ON reminders.task_id = tasks.id
+        WHERE reminders.is_active=1
+          AND reminders.remind_at<=CURRENT_TIMESTAMP
+        ORDER BY reminders.remind_at ASC
     ''')
-    reminders=cursor.fetchall()
+    reminders = cursor.fetchall()
     conn.close()
     return reminders
 def deactivate_reminders(reminder_id):

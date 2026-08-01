@@ -90,6 +90,8 @@ class NoteNestApp(MDApp):
             md_bg_color=theme_manager.get_color(CARD_PRIMARY),
         )
 
+        icon_buttons = []
+
         def make_nav_button(icon, screen_name):
             wrapper = MDAnchorLayout(size_hint_x=1, anchor_x="center", anchor_y="center")
             btn = MDIconButton(
@@ -98,6 +100,7 @@ class NoteNestApp(MDApp):
                 icon_color=theme_manager.get_color(TEXT_PRIMARY),
                 on_release=lambda x: setattr(self.sm, "current", screen_name),
             )
+            icon_buttons.append(btn)
             wrapper.add_widget(btn)
             return wrapper
 
@@ -105,6 +108,14 @@ class NoteNestApp(MDApp):
         nav.add_widget(make_nav_button("calendar-outline", "calendar"))
         nav.add_widget(make_nav_button("notebook-outline", "notes"))
         nav.add_widget(make_nav_button("timer-sand", "timer"))
+
+        def refresh_nav_theme(*_args):
+            nav.md_bg_color = theme_manager.get_color(CARD_PRIMARY)
+            for btn in icon_buttons:
+                btn.icon_color = theme_manager.get_color(TEXT_PRIMARY)
+
+        theme_manager.bind(theme_name=refresh_nav_theme)
+
         return nav
 
 
