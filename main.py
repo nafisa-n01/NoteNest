@@ -16,7 +16,6 @@ from screens.recently_deleted_screen import RecentlyDeletedScreen
 from theme.theme_manager import theme_manager
 from kivy.core.window import Window
 
-from theme.theme_manager import theme_manager
 from theme.palettes import CARD_PRIMARY, TEXT_PRIMARY
 
 # Tells Kivy to automatically resize the app's visible area so whatever
