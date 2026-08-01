@@ -6,12 +6,13 @@
 
     MDBoxLayout:
         orientation: "vertical"
-        padding: dp(24)
-        spacing: dp(20)
+        padding: dp(20)
+        spacing: dp(14)
 
         # =====================================================
-        # Top bar: back button + title/subtitle, side by side —
-        # matches SettingsScreen's header shape for consistency.
+        # Top bar: back button + title/subtitle + history icon.
+        # Matches SettingsScreen's header shape, extended with a
+        # right-aligned icon for the session history popup.
         # =====================================================
 
         MDBoxLayout:
@@ -28,6 +29,7 @@
 
             MDBoxLayout:
                 orientation: "vertical"
+                size_hint_x: 1
 
                 MDLabel:
                     id: header_label
@@ -43,17 +45,19 @@
                     font_style: "Body"
                     role: "small"
 
+            MDIconButton:
+                id: history_button
+                icon: "history"
+                theme_icon_color: "Custom"
+                pos_hint: {"center_y": 0.5}
+                on_release: root.open_session_history()
+
         # =====================================================
         # Centered cluster: hourglass, timer, session info,
         # status message. This AnchorLayout fills 100% of the
         # leftover vertical space (top_bar and controls_row are
         # both fixed-height), so the whole cluster is properly
         # centered regardless of exact content sizes.
-        #
-        # The cluster itself has a fixed width (size_hint_x: None,
-        # width: dp(300)) rather than adaptive_size — this is what
-        # was fixed. Only height stays adaptive, which is safe
-        # because every child below already has an explicit height.
         # =====================================================
 
         AnchorLayout:
@@ -65,11 +69,18 @@
                 size_hint: None, None
                 width: dp(300)
                 adaptive_height: True
-                spacing: dp(16)
+                spacing: dp(10)
+
+                # Small spacer -- nudges the hourglass down slightly
+                # from the top of the cluster instead of sitting flush
+                # against it, per "bring the hourglass a bit below".
+                Widget:
+                    size_hint_y: None
+                    height: dp(18)
 
                 AnchorLayout:
                     size_hint_y: None
-                    height: dp(160)
+                    height: dp(150)
 
                     HourglassWidget:
                         id: hourglass
@@ -86,7 +97,7 @@
                     role: "large"
                     font_size: "56sp"
                     size_hint_y: None
-                    height: dp(70)
+                    height: dp(66)
 
                 MDLabel:
                     id: session_label
@@ -97,7 +108,7 @@
                     font_style: "Title"
                     role: "small"
                     size_hint_y: None
-                    height: dp(28)
+                    height: dp(26)
 
                 MDLabel:
                     id: session_sub_label
@@ -108,7 +119,7 @@
                     font_style: "Body"
                     role: "small"
                     size_hint_y: None
-                    height: dp(22)
+                    height: dp(26)
 
                 # Reserved height, even when empty, so a transition
                 # message appearing/disappearing never shifts the
@@ -122,7 +133,7 @@
                     font_style: "Body"
                     role: "small"
                     size_hint_y: None
-                    height: dp(24)
+                    height: dp(22)
 
         # =====================================================
         # Controls: reset (secondary) — play/pause (primary,
