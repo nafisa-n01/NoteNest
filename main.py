@@ -15,6 +15,8 @@ from database.db import create_tables
 from screens.recently_deleted_screen import RecentlyDeletedScreen
 from theme.theme_manager import theme_manager
 from kivy.core.window import Window
+from screens.checklist_screen import ChecklistScreen
+from screens.checklist_detail_screen import ChecklistDetailScreen
 
 from theme.palettes import CARD_PRIMARY, TEXT_PRIMARY
 
@@ -62,6 +64,8 @@ class NoteNestApp(MDApp):
         Builder.load_file("settings_screen.kv")
         Builder.load_file("timer_screen.kv")
         Builder.load_file("calendar_screen.kv")
+        Builder.load_file("checklist_screen.kv")
+        Builder.load_file("checklist_detail_screen.kv")
 
         self.sm = ScreenManager()
         self.sm.add_widget(HomeScreen(name="home"))
@@ -71,6 +75,8 @@ class NoteNestApp(MDApp):
         self.sm.add_widget(SettingsScreen(name="settings"))
         self.sm.add_widget(TimerScreen(name="timer"))
         self.sm.add_widget(CalendarScreen(name="calendar"))
+        self.sm.add_widget(ChecklistScreen(name="checklist"))
+        self.sm.add_widget(ChecklistDetailScreen(name="checklist_detail"))
         self.sm.current = "home"
 
         root = RootLayout(orientation="vertical")

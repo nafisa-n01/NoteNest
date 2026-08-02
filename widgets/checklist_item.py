@@ -1,180 +1,278 @@
-# widgets/checklist_item.py
-# A single checklist task. Per spec:
-# - one tap toggles complete/incomplete
-# - optional category and priority (user may set neither, either, or both)
-# - an optional due date (empty string = not set, hidden in the UI)
-# - optional subtasks, each independently checkable
-# implementation and isn't part of what this checklist does.
-#
-# category/priority are placeholder-set for now (not yet wired to the
-# real categories table) -- deliberately simple, per "I want a simple
-# version to show and test," to be upgraded later.
+"""
+widgets/checklist_item.py
 
-import os
-from datetime import datetime
+Individual item/sub-item widgets used inside a single checklist's
+detail screen. Built entirely in Python (no companion kv file) so
+they follow theme_manager. No category/priority here anymore -- those
+now belong to the checklist as a whole (see widgets/checklist_card.py
+and screens/checklist_detail_screen.py), not to individual items, per
+the simplified spec.
 
-from kivy.lang import Builder
-from kivy.properties import BooleanProperty, ListProperty, StringProperty
+External contract (kept close to before, minus the removed fields):
+  - text, checked: plain properties
+  - subtasks: ListProperty of {"text":..., "checked":...} dicts,
+    optionally with an "id" once persisted
+  - on_toggle_complete: callable(checked) the screen assigns
+"""
+
+from kivy.metrics import dp, sp
+from kivy.properties import BooleanProperty, ListProperty, NumericProperty, ObjectProperty, StringProperty
+from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.textinput import TextInput
+from kivy.uix.widget import Widget
+from kivy.graphics import Color, Ellipse, Line, RoundedRectangle
+from kivy.utils import get_color_from_hex
+
+from kivymd.uix.button import MDIconButton
+
+from theme.palettes import ACCENT, CARD_PRIMARY, TEXT_PRIMARY, TEXT_SECONDARY, BORDER
+from theme.theme_manager import theme_manager
 
 
-Builder.load_file(
-    os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "kv",
-        "checklist_item.kv",
-    )
-)
+def theme_rgba(token):
+    return get_color_from_hex(theme_manager.get_color(token))
+
+
+class CheckCircle(ButtonBehavior, Widget):
+    """Tappable circular checkbox, shared by ChecklistItem and SubChecklistItem."""
+
+    checked = BooleanProperty(False)
+    diameter = NumericProperty(dp(24))
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint = (None, None)
+        self.size = (self.diameter, self.diameter)
+        with self.canvas:
+            self._fill_color = Color(0, 0, 0, 0)
+            self._fill = Ellipse(pos=self.pos, size=self.size)
+            self._ring_color = Color(0, 0, 0, 0)
+            self._ring = Line(width=dp(1.4))
+        self.bind(
+            pos=self._redraw,
+            size=self._redraw,
+            diameter=self._sync_size,
+            checked=self._refresh_theme,
+        )
+        theme_manager.bind(theme_name=self._refresh_theme)
+        self._refresh_theme()
+
+    def _sync_size(self, *_args):
+        self.size = (self.diameter, self.diameter)
+
+    def _redraw(self, *_args):
+        self._fill.pos = self.pos
+        self._fill.size = self.size
+        self._ring.ellipse = (self.x, self.y, self.width, self.height)
+
+    def _refresh_theme(self, *_args):
+        accent = theme_rgba(ACCENT)
+        self._ring_color.rgba = accent
+        self._fill_color.rgba = accent if self.checked else (0, 0, 0, 0)
+        self._redraw()
 
 
 class SubChecklistItem(BoxLayout):
-    """A single subtask row inside a checklist item."""
+    """One sub-item row -- checkbox + label, indented under its parent item."""
 
     text = StringProperty("")
     checked = BooleanProperty(False)
+    on_toggle = ObjectProperty(None, allownone=True)
 
-    def toggle(self):
+    def __init__(self, **kwargs):
+        kwargs.setdefault("orientation", "horizontal")
+        kwargs.setdefault("size_hint_y", None)
+        kwargs.setdefault("height", dp(32))
+        kwargs.setdefault("spacing", dp(10))
+        kwargs.setdefault("padding", [dp(48), 0, dp(10), 0])
+        super().__init__(**kwargs)
+
+        self.check = CheckCircle(diameter=dp(17))
+        self.check.checked = self.checked
+        self.check.bind(on_release=lambda *_a: self._toggle())
+        self.add_widget(self.check)
+
+        self.label = Label(
+            markup=True,
+            font_size=sp(12.5),
+            halign="left",
+            valign="middle",
+            size_hint_x=1,
+        )
+        self.label.bind(size=self.label.setter("text_size"))
+        self.add_widget(self.label)
+
+        self.bind(checked=self._refresh, text=self._refresh)
+        theme_manager.bind(theme_name=self._refresh)
+        self._refresh()
+
+    def _refresh(self, *_args):
+        self.check.checked = self.checked
+        self.label.text = f"[s]{self.text}[/s]" if self.checked else self.text
+        self.label.color = (
+            theme_rgba(TEXT_SECONDARY) if self.checked else theme_rgba(TEXT_PRIMARY)
+        )
+
+    def _toggle(self):
         self.checked = not self.checked
+        if self.on_toggle:
+            self.on_toggle(self.checked)
 
 
 class ChecklistItem(BoxLayout):
-    """A single checklist task with optional category, priority, due date, and subtasks."""
+    """One item within a checklist, as a themed rounded row/card, with
+    an expandable sub-item section underneath."""
 
     text = StringProperty("")
     checked = BooleanProperty(False)
-
-    # Optional -- empty string means "not set", hidden in the UI.
-    category = StringProperty("")
-    priority = StringProperty("")
-    due_date = StringProperty("")
-
-    # Controls subtask visibility.
+    subtasks = ListProperty([])
     expanded = BooleanProperty(False)
 
-    # Each entry is a dict: {"text": str, "checked": bool}.
-    subtasks = ListProperty([])
+    on_toggle_complete = ObjectProperty(None, allownone=True)
 
-    # Placeholder category set, not yet wired to the real categories
-    # table -- "" (not set) is always the first option when cycling.
-    CATEGORY_OPTIONS = ["", "Study", "Life", "Health", "Work"]
-    CATEGORY_COLORS = {
-        "Study": (0.98, 0.87, 0.85, 1),
-        "Life": (0.91, 0.95, 0.87, 1),
-        "Health": (0.90, 0.94, 0.98, 1),
-        "Work": (0.98, 0.90, 0.90, 1),
-    }
+    def __init__(self, **kwargs):
+        kwargs.setdefault("orientation", "vertical")
+        kwargs.setdefault("size_hint_y", None)
+        kwargs.setdefault("spacing", dp(2))
+        super().__init__(**kwargs)
+        self.bind(minimum_height=self.setter("height"))
 
-    # "" (not set) is always the first option when cycling.
-    PRIORITY_OPTIONS = ["", "High", "Medium", "Low"]
-    PRIORITY_COLORS = {
-        "High": (0.98, 0.92, 0.92, 1),
-        "Medium": (0.98, 0.93, 0.85, 1),
-        "Low": (0.91, 0.95, 0.87, 1),
-    }
+        with self.canvas.before:
+            self._card_bg = Color(0, 0, 0, 0)
+            self._card_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(14)])
+            self._card_border_color = Color(0, 0, 0, 0)
+            self._card_border = Line(width=1)
+        self.bind(pos=self._update_card_canvas, size=self._update_card_canvas)
 
-    def on_kv_post(self, base_widget):
-        self.build_subtasks()
+        self._build_main_row()
 
-    def on_subtasks(self, instance, value):
-        if "subtask_container" in self.ids:
-            self.build_subtasks()
+        self.subtask_container = BoxLayout(
+            orientation="vertical", size_hint_y=None, spacing=dp(2),
+            padding=[0, dp(2), 0, dp(6)],
+        )
+        self.subtask_container.bind(minimum_height=self.subtask_container.setter("height"))
+        self.add_widget(self.subtask_container)
 
-    def toggle(self):
-        """Toggle the main task between completed and incomplete."""
+        self.bind(
+            checked=self._refresh_main,
+            text=self._refresh_main,
+            subtasks=self._rebuild_subtasks,
+            expanded=self._rebuild_subtasks,
+        )
+        theme_manager.bind(theme_name=self._refresh_all)
+        self._refresh_all()
+
+    def _update_card_canvas(self, *_args):
+        self._card_rect.pos = self.pos
+        self._card_rect.size = self.size
+        self._card_border.rounded_rectangle = (
+            self.x, self.y, self.width, self.height, dp(14)
+        )
+
+    def _build_main_row(self):
+        row = BoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(48),
+            spacing=dp(10),
+            padding=[dp(12), dp(8), dp(12), dp(2)],
+        )
+
+        self.expand_btn = MDIconButton(
+            icon="chevron-right",
+            theme_icon_color="Custom",
+            size_hint=(None, None),
+            size=(dp(30), dp(30)),
+            pos_hint={"center_y": 0.5},
+        )
+        self.expand_btn.bind(
+            on_release=lambda *_a: setattr(self, "expanded", not self.expanded)
+        )
+        row.add_widget(self.expand_btn)
+
+        self.check = CheckCircle(diameter=dp(24))
+        self.check.bind(on_release=lambda *_a: self._toggle_complete())
+        row.add_widget(self.check)
+
+        self.title_label = Label(
+            markup=True,
+            font_size=sp(14.5),
+            halign="left",
+            valign="middle",
+            size_hint_x=1,
+            shorten=True,
+            shorten_from="right",
+        )
+        self.title_label.bind(size=self.title_label.setter("text_size"))
+        row.add_widget(self.title_label)
+
+        self.add_widget(row)
+
+    def _toggle_complete(self):
         self.checked = not self.checked
+        if self.on_toggle_complete:
+            self.on_toggle_complete(self.checked)
 
-    def toggle_expand(self):
-        """Show or hide the subtask section."""
-        self.expanded = not self.expanded
+    def _refresh_all(self, *_args):
+        self._refresh_main()
+        self._rebuild_subtasks()
+        self._card_bg.rgba = theme_rgba(CARD_PRIMARY)
+        self._card_border_color.rgba = theme_rgba(BORDER)
+        self._update_card_canvas()
 
-        container = self.ids.subtask_container
-        expand_button = self.ids.expand_btn
+    def _refresh_main(self, *_args):
+        self.check.checked = self.checked
+        self.title_label.text = f"[s]{self.text}[/s]" if self.checked else self.text
+        self.title_label.color = (
+            theme_rgba(TEXT_SECONDARY) if self.checked else theme_rgba(TEXT_PRIMARY)
+        )
 
-        if self.expanded:
-            container.opacity = 1
-            container.height = container.minimum_height
-            expand_button.text = "▼"
-        else:
-            container.opacity = 0
-            container.height = 0
-            expand_button.text = "►"
+    def _rebuild_subtasks(self, *_args):
+        self.subtask_container.clear_widgets()
 
-    def build_subtasks(self):
-        """Create one SubChecklistItem widget per subtask entry."""
-        container = self.ids.subtask_container
-        container.clear_widgets()
+        if not self.expanded:
+            self.expand_btn.icon = "chevron-right"
+            return
+
+        self.expand_btn.icon = "chevron-down"
 
         for index, subtask in enumerate(self.subtasks):
-            item = SubChecklistItem(
+            row = SubChecklistItem(
                 text=subtask.get("text", ""),
-                checked=subtask.get("checked", False),
+                checked=bool(subtask.get("checked", False)),
             )
-            item.bind(
-                checked=lambda instance, value, i=index: self._on_subtask_checked(i, value)
+            row.bind(
+                checked=lambda _inst, value, i=index: self._toggle_subtask(i, value)
             )
-            container.add_widget(item)
+            self.subtask_container.add_widget(row)
 
-        if self.expanded:
-            container.height = container.minimum_height
+        self._add_subtask_input = TextInput(
+            hint_text="Add a sub-item...",
+            multiline=False,
+            size_hint_y=None,
+            height=dp(36),
+            padding=[dp(48), dp(8), dp(10), dp(8)],
+            background_color=(0, 0, 0, 0),
+        )
+        self._add_subtask_input.bind(
+            on_text_validate=lambda *_a: self._submit_new_subtask()
+        )
+        self.subtask_container.add_widget(self._add_subtask_input)
 
-    def _on_subtask_checked(self, index, value):
-        # ListProperty only notifies bound listeners when the property
-        # itself is REASSIGNED, not when an existing list is mutated
-        # in place -- so this builds a new list with the one entry
-        # updated, rather than editing self.subtasks[index] directly.
+    def _toggle_subtask(self, index, checked):
         updated = list(self.subtasks)
-        updated[index] = {**updated[index], "checked": value}
+        if 0 <= index < len(updated):
+            updated[index] = {**updated[index], "checked": checked}
         self.subtasks = updated
 
-    def add_subtask(self, text):
-        """Adds a new, unchecked subtask with the given text."""
-        if not text.strip():
+    def _submit_new_subtask(self):
+        text = self._add_subtask_input.text.strip()
+        if not text:
             return
-        self.subtasks = self.subtasks + [{"text": text.strip(), "checked": False}]
+        self.add_subtask(text)
+        self._add_subtask_input.text = ""
 
-    def cycle_category(self):
-        """
-        Cycles category through CATEGORY_OPTIONS, including "" (not
-        set) -- lets a user clear a category by cycling back to it,
-        same as priority below.
-        """
-        try:
-            current_index = self.CATEGORY_OPTIONS.index(self.category)
-        except ValueError:
-            current_index = 0
-
-        next_index = (current_index + 1) % len(self.CATEGORY_OPTIONS)
-        self.category = self.CATEGORY_OPTIONS[next_index]
-
-    def cycle_priority(self):
-        """Cycles priority through PRIORITY_OPTIONS, including "" (not set)."""
-        try:
-            current_index = self.PRIORITY_OPTIONS.index(self.priority)
-        except ValueError:
-            current_index = 0
-
-        next_index = (current_index + 1) % len(self.PRIORITY_OPTIONS)
-        self.priority = self.PRIORITY_OPTIONS[next_index]
-
-    def get_category_color(self):
-        """Background color for the current category, or transparent if unset."""
-        return self.CATEGORY_COLORS.get(self.category, (0, 0, 0, 0))
-
-    def get_priority_color(self):
-        """Background color for the current priority, or transparent if unset."""
-        return self.PRIORITY_COLORS.get(self.priority, (0, 0, 0, 0))
-
-    def format_due_date(self, date_value):
-        """
-        Converts an ISO date like "2026-07-25" into "July 25, 2026".
-        Falls back to the raw value if it isn't in that format.
-        """
-        if not date_value:
-            return ""
-
-        try:
-            parsed_date = datetime.strptime(date_value, "%Y-%m-%d")
-            return parsed_date.strftime("%B %d, %Y")
-        except ValueError:
-            return date_value
+    def add_subtask(self, text):
+        self.subtasks = list(self.subtasks) + [{"text": text, "checked": False}]

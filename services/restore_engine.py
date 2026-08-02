@@ -136,7 +136,15 @@ def _populate_calendar_events(events):
             event_date=event["event_date"],
             event_time=event.get("event_time"),
             event_link=event.get("event_link"),
+            is_recurring=bool(event.get("is_recurring")),
         )
+        # create_event() always starts a fresh row with completed=0,
+        # original_date=event_date, missed_days=0 (see its own
+        # docstring) -- restoring a recurring reminder's exact
+        # completed/missed_days state isn't attempted here, since the
+        # very next roll_forward_recurring_events() call (which runs
+        # every time the Calendar screen opens) will recompute
+        # missed_days correctly from today's date anyway.
 
 def _populate_attachments(attachments, note_id_map):
     for attachment in attachments:

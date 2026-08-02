@@ -1,12 +1,14 @@
 # screens/calendar_screen.py
 """
-Calendar screen -- simple date-based reminders.
+Calendar screen -- simple date-based reminders, with an optional
+recurring mode: an incomplete recurring reminder shifts to today
+every time the calendar is opened, and shows a "Missed N days" tag
+until it's marked done.
 
-Rebuilt on MDScreen + a real calendar_screen.kv (matching the pattern
-used by settings_screen.py), replacing the old Screen + hand-rolled
-canvas-widget version. Talks only to database/calendar_queries.py --
-no dependency on tasks, categories, or reminders (those stay owned by
-other screens/teammates).
+MDScreen + calendar_screen.kv, matching settings_screen.py's pattern.
+Talks only to database/calendar_queries.py -- no dependency on
+tasks, categories, or reminders (those stay owned by other
+screens/teammates).
 """
 
 import calendar
@@ -36,6 +38,8 @@ from database.calendar_queries import (
     delete_event,
     get_all_event_dates,
     get_events_by_date,
+    mark_event_completed,
+    roll_forward_recurring_events,
     update_event,
 )
 from theme.palettes import (
@@ -62,12 +66,9 @@ def theme_rgba(token):
 class CalendarDayCell(ButtonBehavior, BoxLayout):
     """
     One date cell in the month grid.
-    - Selected day: filled accent circle behind the number (matches the
-      reference image's blue-filled "15").
+    - Selected day: filled accent circle behind the number.
     - Today (not selected): thin accent ring instead of a fill.
     - Has an event: small dot under the number.
-    Drawing is a single Ellipse (+ ring), not a full rounded-rect/border
-    widget, to keep 42-cells-per-month cheap on mobile.
     """
 
     day_number = StringProperty("")
@@ -128,30 +129,30 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
 
         self._dot_color.rgba = theme_rgba(ACCENT) if self.has_event else (0, 0, 0, 0)
 
-        text_color = theme_rgba(TEXT_PRIMARY)
-        self.number_label.color = text_color
+        self.number_label.color = theme_rgba(TEXT_PRIMARY)
         self._redraw()
 
 
 class EventRow(ButtonBehavior, BoxLayout):
     """
     One reminder in the selected day's agenda -- colored left bar,
-    outline circle, title + time, matching the "Upcoming" card in the
-    reference image. Tapping opens the edit/delete popup. If the
-    reminder has a link, an "open in new" icon button also appears,
-    which opens the link directly without triggering the edit popup.
+    complete-checkbox, title (+ strikethrough when done), time and/or
+    a "Missed N days" tag, and an optional "open link" button.
+    Tapping the row body (not the checkbox/link button) opens edit/delete.
     """
 
-    def __init__(self, event, bar_token, on_tap, **kwargs):
+    def __init__(self, event, bar_token, on_tap, on_toggle_complete, **kwargs):
         kwargs.setdefault("orientation", "horizontal")
         kwargs.setdefault("size_hint_y", None)
         kwargs.setdefault("height", dp(64))
-        kwargs.setdefault("spacing", dp(12))
+        kwargs.setdefault("spacing", dp(10))
         kwargs.setdefault("padding", [dp(2), dp(8), dp(4), dp(8)])
         super().__init__(**kwargs)
 
         self.event = event
         self.on_tap = on_tap
+        self.on_toggle_complete = on_toggle_complete
+        completed = event.get("completed", False)
 
         bar = Widget(size_hint_x=None, width=dp(3))
         with bar.canvas:
@@ -167,24 +168,20 @@ class EventRow(ButtonBehavior, BoxLayout):
         )
         self.add_widget(bar)
 
-        ring = Widget(size_hint=(None, None), size=(dp(18), dp(18)), pos_hint={"center_y": 0.5})
-        from kivy.graphics import Line
-        with ring.canvas:
-            ring_color = Color(*theme_rgba(bar_token))
-            ring_line = Line(circle=(0, 0, dp(8)), width=dp(1.4))
-
-        def _update_ring(*_args):
-            ring_line.circle = (ring.center_x, ring.center_y, dp(8))
-
-        ring.bind(pos=_update_ring, size=_update_ring)
-        theme_manager.bind(
-            theme_name=lambda *_a: setattr(ring_color, "rgba", theme_rgba(bar_token))
+        self.check_btn = MDIconButton(
+            icon="checkbox-marked" if completed else "checkbox-blank-outline",
+            theme_icon_color="Custom",
+            icon_color=theme_rgba(ACCENT) if completed else theme_rgba(TEXT_SECONDARY),
+            pos_hint={"center_y": 0.5},
         )
-        self.add_widget(ring)
+        self.check_btn.bind(on_release=lambda *_a: self._toggle_complete())
+        self.add_widget(self.check_btn)
 
         text_box = BoxLayout(orientation="vertical")
-        title_label = Label(
-            text=event.get("title", ""),
+        title = event.get("title", "")
+        self.title_label = Label(
+            text=f"[s]{title}[/s]" if completed else title,
+            markup=True,
             font_size=sp(14),
             halign="left",
             valign="middle",
@@ -192,11 +189,18 @@ class EventRow(ButtonBehavior, BoxLayout):
             size_hint_y=None,
             height=dp(24),
         )
-        title_label.bind(size=title_label.setter("text_size"))
+        self.title_label.bind(size=self.title_label.setter("text_size"))
 
         time_text = event.get("event_time") or "Any time"
-        time_label = Label(
-            text=time_text,
+        missed_days = event.get("missed_days") or 0
+        if not completed and missed_days:
+            missed_text = "Missed yesterday" if missed_days == 1 else f"Missed {missed_days} days"
+            meta_text = f"{time_text}   \u2022   {missed_text}"
+        else:
+            meta_text = time_text
+
+        self.meta_label = Label(
+            text=meta_text,
             font_size=sp(11),
             halign="left",
             valign="middle",
@@ -204,10 +208,10 @@ class EventRow(ButtonBehavior, BoxLayout):
             size_hint_y=None,
             height=dp(20),
         )
-        time_label.bind(size=time_label.setter("text_size"))
+        self.meta_label.bind(size=self.meta_label.setter("text_size"))
 
-        text_box.add_widget(title_label)
-        text_box.add_widget(time_label)
+        text_box.add_widget(self.title_label)
+        text_box.add_widget(self.meta_label)
         self.add_widget(text_box)
 
         if event.get("event_link"):
@@ -227,6 +231,10 @@ class EventRow(ButtonBehavior, BoxLayout):
         if not link.startswith(("http://", "https://")):
             link = "https://" + link
         webbrowser.open(link)
+
+    def _toggle_complete(self):
+        if self.on_toggle_complete:
+            self.on_toggle_complete(self.event)
 
     def on_release(self):
         if self.on_tap:
@@ -256,9 +264,6 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
         "empty_label":     ("text_color", TEXT_SECONDARY),
     }
 
-    # Two accent tones cycled across event rows, mirroring the
-    # reference image's purple/blue left bars, without inventing new
-    # palette tokens (palettes.py stays untouched).
     _BAR_TOKENS = (ACCENT, TEXT_SECONDARY)
 
     def __init__(self, **kwargs):
@@ -269,10 +274,9 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
         self.current_month = now.month
         self.selected_date = now.strftime("%Y-%m-%d")
         self.day_cells = {}
-        # Set by HomeScreen when routing here (see open_task_detail in
-        # home_screen.py) -- unused by this reminder-based calendar,
-        # kept only so that attribute assignment from home_screen.py
-        # doesn't fail.
+        # Set by HomeScreen when routing here -- unused by this
+        # reminder-based calendar, kept only so that attribute
+        # assignment from home_screen.py doesn't fail.
         self.selected_task_id = None
 
         super().__init__(**kwargs)
@@ -288,14 +292,15 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
     def on_kv_post(self, base_widget):
         super().on_kv_post(base_widget)
         self._build_weekday_header()
+        roll_forward_recurring_events(self._user_id())
         self.build_month_grid()
         self.select_date(self.selected_date)
 
     def on_pre_enter(self, *_args):
+        roll_forward_recurring_events(self._user_id())
         self.build_month_grid()
         self.select_date(self.selected_date)
 
-    # -- header weekday row (Mon..Sun labels above the grid) --
     def _build_weekday_header(self):
         header = self.ids.get("weekday_header")
         if header is None or header.children:
@@ -312,7 +317,6 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
                 )
             )
 
-    # -- month grid --
     def build_month_grid(self):
         grid = self.ids.get("day_grid")
         if grid is None:
@@ -351,7 +355,6 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
                 self.day_cells[date_value] = cell
                 grid.add_widget(cell)
 
-    # -- selecting a date --
     def select_date(self, date_value):
         self.selected_date = date_value
         for value, cell in self.day_cells.items():
@@ -383,8 +386,18 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
         for index, event in enumerate(events):
             bar_token = self._BAR_TOKENS[index % len(self._BAR_TOKENS)]
             agenda_list.add_widget(
-                EventRow(event=event, bar_token=bar_token, on_tap=self.open_edit_popup)
+                EventRow(
+                    event=event,
+                    bar_token=bar_token,
+                    on_tap=self.open_edit_popup,
+                    on_toggle_complete=self.toggle_event_completed,
+                )
             )
+
+    def toggle_event_completed(self, event):
+        mark_event_completed(event["id"], not event.get("completed", False))
+        self.build_month_grid()
+        self.select_date(self.selected_date)
 
     # -- navigation --
     def go_back(self):
@@ -424,13 +437,8 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
         self._open_event_popup(mode="add")
 
     def open_add_task_popup(self, activity_type=None):
-        """
-        Compatibility shim for HomeScreen's Quick Add ("Event"/"Task"
-        options), which still calls this old method name/signature.
-        The rebuilt calendar only has one kind of entry (a reminder),
-        so activity_type is accepted but ignored -- this just opens
-        the same add-reminder popup as the "+" button.
-        """
+        """Compatibility shim for HomeScreen's Quick Add -- see
+        earlier note in this file's history for why this exists."""
         self.open_add_popup()
 
     def open_edit_popup(self, event):
@@ -440,7 +448,7 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
         panel = MDCard(
             orientation="vertical",
             padding=dp(18),
-            spacing=dp(12),
+            spacing=dp(10),
             size_hint=(1, 1),
             theme_bg_color="Custom",
             md_bg_color=theme_manager.get_color(CARD_PRIMARY),
@@ -487,6 +495,44 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
         )
         panel.add_widget(link_input)
 
+        # -- recurring toggle row --
+        recurring_row = BoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(40),
+            spacing=dp(8),
+        )
+        recurring_state = {
+            "value": bool(event.get("is_recurring")) if event else False
+        }
+        recurring_label = Label(
+            text="Repeat daily until marked done",
+            font_size=sp(11),
+            color=theme_rgba(TEXT_SECONDARY),
+            halign="left",
+            valign="middle",
+        )
+        recurring_label.bind(size=recurring_label.setter("text_size"))
+        recurring_toggle_btn = MDIconButton(
+            icon="toggle-switch" if recurring_state["value"] else "toggle-switch-off-outline",
+            theme_icon_color="Custom",
+            icon_color=theme_rgba(ACCENT) if recurring_state["value"] else theme_rgba(TEXT_SECONDARY),
+        )
+
+        def toggle_recurring(*_args):
+            recurring_state["value"] = not recurring_state["value"]
+            recurring_toggle_btn.icon = (
+                "toggle-switch" if recurring_state["value"] else "toggle-switch-off-outline"
+            )
+            recurring_toggle_btn.icon_color = (
+                theme_rgba(ACCENT) if recurring_state["value"] else theme_rgba(TEXT_SECONDARY)
+            )
+
+        recurring_toggle_btn.bind(on_release=toggle_recurring)
+        recurring_row.add_widget(recurring_label)
+        recurring_row.add_widget(recurring_toggle_btn)
+        panel.add_widget(recurring_row)
+
         error_label = Label(
             text="",
             font_size=sp(10),
@@ -510,7 +556,7 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
             title="",
             content=panel,
             size_hint=(0.82, None),
-            height=dp(330) if mode == "add" else dp(370),
+            height=dp(370) if mode == "add" else dp(410),
             auto_dismiss=True,
             separator_height=0,
             background="",
@@ -537,6 +583,7 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
             title = title_input.text.strip()
             time_value = time_input.text.strip()
             link_value = link_input.text.strip()
+            is_recurring = recurring_state["value"]
 
             if not title:
                 error_label.text = "Please enter a title."
@@ -555,9 +602,12 @@ class CalendarScreen(ThemedScreenMixin, MDScreen):
                     event_date=self.selected_date,
                     event_time=time_value or None,
                     event_link=link_value or None,
+                    is_recurring=is_recurring,
                 )
             else:
-                update_event(event["id"], title, time_value or None, link_value or None)
+                update_event(
+                    event["id"], title, time_value or None, link_value or None, is_recurring,
+                )
 
             popup.dismiss()
             self.build_month_grid()
