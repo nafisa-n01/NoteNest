@@ -7,6 +7,13 @@
 # tucked away until the user taps to expand them. Also lets the user
 # edit the checklist's own title/priority via the pencil icon.
 #
+# Also runs the same calculator pass the note editor uses on note
+# text (screens/editor/calculator.py) across every item's text, so a
+# checklist doubling as a shopping list ("Milk 4.99", "Eggs 3.50")
+# gets a running total for free -- a plain to-do checklist with no
+# numbers in it just shows nothing, same "only appears if there's
+# something to show" rule the note editor's grand total already uses.
+#
 # No category anywhere in this feature -- the checklist's title is
 # already the categorization, per your last change.
 
@@ -40,6 +47,8 @@ from services.checklist_store import (
     delete_checklist_item,
 )
 
+from screens.editor.calculator import process_calculator_lines, format_calculated_number
+
 
 def theme_rgba(token):
     return get_color_from_hex(theme_manager.get_color(token))
@@ -68,10 +77,20 @@ class ChecklistDetailScreen(ThemedScreenMixin, MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._checked_expanded = False
+        # Not a KV id (no KV changes for this feature) -- built once,
+        # in code, and inserted under subtitle_label the same way
+        # NoteEditorScreen builds FormattingToolbar/preview widgets in
+        # Python rather than in .kv. THEME_MAP can't reach it since
+        # it has no id, so on_theme_applied below colors it by hand.
+        self._total_label = None
 
     def on_pre_enter(self, *args):
         self._checked_expanded = False
         self.load_checklist()
+
+    def on_theme_applied(self):
+        if self._total_label is not None:
+            self._total_label.color = theme_rgba(TEXT_PRIMARY)
 
     def go_back(self):
         self.manager.current = "checklist"
@@ -125,6 +144,54 @@ class ChecklistDetailScreen(ThemedScreenMixin, MDScreen):
             if self._checked_expanded:
                 for item in checked_items:
                     checked_section.add_widget(self._build_item_row(item))
+
+        # -- running total (see module docstring) --
+        self._update_total(items)
+
+    def _update_total(self, items):
+        # get_items_by_checklist only returns top-level items -- that's
+        # deliberate here too, same as get_checklist_item_counts on the
+        # list screen: sub-item text (e.g. "2%" under "Milk") isn't
+        # priced separately in this feature, so only top-level rows
+        # feed the calculator.
+        combined_text = "\n".join(item["text"] for item in items)
+        _display_text, grand_total, uses_currency = process_calculator_lines(combined_text)
+
+        total_label = self._ensure_total_label()
+        if grand_total is None:
+            total_label.text = ""
+            total_label.height = 0
+        else:
+            currency_prefix = "$" if uses_currency else ""
+            total_label.text = f"Total: {currency_prefix}{format_calculated_number(grand_total)}"
+            total_label.texture_update()
+            total_label.height = total_label.texture_size[1] + dp(4)
+
+    def _ensure_total_label(self):
+        # Built once and cached -- inserted right under subtitle_label
+        # in the header's vertical box (subtitle_label.parent), since
+        # that box has no id of its own in KV and this KV file is
+        # otherwise left untouched. size_hint_y=None with a manually
+        # driven height (set in _update_total above) is what makes it
+        # collapse to nothing when there's no total to show, standing
+        # in for the adaptive_height a KV-defined label would get for
+        # free.
+        if self._total_label is None:
+            label = Label(
+                text="",
+                font_size=sp(13.5),
+                bold=True,
+                color=theme_rgba(TEXT_PRIMARY),
+                halign="left",
+                valign="middle",
+                size_hint_y=None,
+                height=0,
+            )
+            label.bind(size=label.setter("text_size"))
+            parent = self.ids.subtitle_label.parent
+            parent.add_widget(label, index=len(parent.children) - 1)
+            self._total_label = label
+        return self._total_label
 
     def _build_empty_label(self):
         return MDLabel(

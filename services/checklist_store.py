@@ -80,8 +80,8 @@ def create_checklist(title, priority="", user_id=1):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO checklists (user_id, title, category, priority)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO checklists (user_id, title, priority)
+        VALUES (?, ?, ?)
     ''', (user_id, title, priority))
     checklist_id = cursor.lastrowid
     conn.commit()

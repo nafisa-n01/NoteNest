@@ -33,6 +33,8 @@ from database.planner_queries import (
     get_task_detail,
 )
 
+from services.checklist_store import create_checklist, get_all_checklists
+
 # Maps activity_type -> icon, since tasks created via different Quick
 # Add options ("Study Session" / "Event" / "Task" / "Shopping") should
 # read differently at a glance on Home, even though they're all just
@@ -43,6 +45,11 @@ ACTIVITY_ICONS = {
     "task": "checkbox-marked-outline",
     "shopping": "cart-outline",
 }
+
+# Title used for the auto-created checklist behind the "Shopping List"
+# Quick Add option. Kept as a constant so the create path and the
+# reuse-lookup path below can never drift out of sync with each other.
+SHOPPING_LIST_TITLE = "Shopping List"
 
 
 class TappableRow(ButtonBehavior, MDBoxLayout):
@@ -479,8 +486,8 @@ class HomeScreen(ThemedScreenMixin, MDScreen):
                                     "Plan your study with Pomodoro", lambda: choose("study")))
         card.add_widget(QuickAddOption("calendar-outline", "Event",
                                     "Add to calendar", lambda: choose("event")))
-        card.add_widget(QuickAddOption("checkbox-marked-outline", "Task",
-                                    "Add to your checklist", lambda: choose("task")))
+        card.add_widget(QuickAddOption("note-text-outline", "Start Noting",
+                                    "Jot something down", lambda: choose("note")))
         card.add_widget(QuickAddOption("cart-outline", "Shopping List",
                                     "Track items and budget", lambda: choose("shopping")))
 
@@ -495,20 +502,44 @@ class HomeScreen(ThemedScreenMixin, MDScreen):
         modal.open()
 
     def route_quick_add(self, kind):
-        if kind in ("event", "task"):
+        if kind == "event":
             self.manager.current = "calendar"
             calendar_screen = self.manager.get_screen("calendar")
             Clock.schedule_once(
                 lambda _dt: calendar_screen.open_add_task_popup(activity_type=kind), 0
             )
         elif kind == "study":
-            self.open_study_session_popup()  
-        elif kind == "shopping":
+            self.open_study_session_popup()
+        elif kind == "note":
             editor = self.manager.get_screen("note_editor")
             editor.current_note_id = None      # create new note
             self.manager.current = "note_editor"
-        
-        
+        elif kind == "shopping":
+            self.open_shopping_list()
+
+    def open_shopping_list(self):
+        """
+        Quick Add > Shopping List. Reuses the user's existing
+        "Shopping List" checklist if one exists, instead of creating a
+        new duplicate every tap -- only creates one the first time.
+        """
+        user_id = getattr(MDApp.get_running_app(), "user_id", 1)
+
+        existing = next(
+            (c for c in get_all_checklists(user_id) if c["title"] == SHOPPING_LIST_TITLE),
+            None,
+        )
+        if existing is not None:
+            checklist_id = existing["id"]
+        else:
+            checklist_id = create_checklist(
+                title=SHOPPING_LIST_TITLE, priority="", user_id=user_id
+            )
+
+        detail_screen = self.manager.get_screen("checklist_detail")
+        detail_screen.checklist_id = checklist_id
+        self.manager.current = "checklist_detail"
+
 
 class QuickAddOption(ButtonBehavior, MDBoxLayout):
     """One row in the Quick Add sheet: icon + title + subtitle."""
@@ -553,5 +584,3 @@ class QuickAddOption(ButtonBehavior, MDBoxLayout):
     def on_release(self):
         if self._on_press:
             self._on_press()
-    
-    
