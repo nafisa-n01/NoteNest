@@ -27,7 +27,11 @@ from theme.palettes import (
     BUTTON,
 )
 
-from database.pomodoro_queries import create_pomodoro_session, complete_pomodoro_session
+from database.pomodoro_queries import (
+    create_pomodoro_session,
+    complete_pomodoro_session,
+    get_last_incomplete_session,
+)
 from services.session_history import get_sessions_for_today
 
 
@@ -179,12 +183,34 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
         self.timer = PomodoroTimer()
         self.dialog = None
 
+        # Which task this timer session belongs to (set externally,
+        # e.g. by HomeScreen, before switching to this screen) and the
+        # pomodoro_sessions row currently in progress for it, if any.
+        self.current_task_id = None
+        self.current_session_id = None
+
+        # Remembers the mode from the previous refresh tick, so we can
+        # detect the exact moment work/break flips (a "transition").
         self._last_is_break = self.timer.is_break
         self._last_cycle_finished = self.timer.cycle_finished
         self._status_clear_event = None
         self._current_session_id = None
 
         Clock.schedule_interval(self.refresh_ui, 0.2)
+
+    def on_pre_enter(self, *args):
+        """
+        Whenever this screen is entered, check whether the task it's
+        pointed at (current_task_id, set by whoever navigated here)
+        already has an unfinished pomodoro session -- e.g. from
+        "Continue Studying" on Home -- and pick that session back up
+        instead of losing track of it.
+        """
+        self.current_session_id = None
+        if self.current_task_id is not None:
+            existing = get_last_incomplete_session(self.current_task_id)
+            if existing:
+                self.current_session_id = existing[0]  # id is the first column
 
     def refresh_ui(self, dt):
         self.ids.timer_label.text = self.timer.get_time()
@@ -207,7 +233,7 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
             self._last_is_break = self.timer.is_break
 
         if self.timer.cycle_finished and not self._last_cycle_finished:
-            self._complete_current_focus_session()
+            self._complete_current_session()
             self._show_status_message(
                 "Nice work! Start another session when you're ready.",
                 duration=None,
@@ -245,14 +271,37 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
             self._current_session_id = None
 
     def _on_session_transitioned(self):
+        """
+        Called once, right when the timer flips between work and break.
+        Picks a short, friendly status message for the new mode, and
+        opens/closes the matching pomodoro_sessions row.
+        """
         if self.timer.is_break:
-            self._complete_current_focus_session()
+            # A focus session just finished -- close it out.
+            self._complete_current_session()
             message = "Study/Work session over."
         else:
-            self._start_new_focus_session_if_fresh()
+            # Break just ended -- a new focus session begins automatically.
+            self._start_new_session()
             message = "Break time over. Time to start focusing again."
 
         self._show_status_message(message)
+
+    def _start_new_session(self):
+        """Create a pomodoro_sessions row for the task this screen is tracking."""
+        if self.current_task_id is None or self.current_session_id is not None:
+            return
+        self.current_session_id = create_pomodoro_session(
+            self.current_task_id,
+            self.timer.work_duration // 60,
+        )
+
+    def _complete_current_session(self):
+        """Mark the in-progress pomodoro_sessions row as completed, if any."""
+        if self.current_session_id is None:
+            return
+        complete_pomodoro_session(self.current_session_id)
+        self.current_session_id = None
 
     def _show_status_message(self, message, duration=4):
         status_label = self.ids.get("status_label")
@@ -282,6 +331,7 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
             self._start_new_focus_session_if_fresh()
             self._last_cycle_finished = False
             self._clear_status_message()
+            self._start_new_session()
             return
 
         if self.timer.is_running:
@@ -290,7 +340,11 @@ class TimerScreen(ThemedScreenMixin, MDScreen):
             self.start_timer()
 
     def start_timer(self):
-        self._start_new_focus_session_if_fresh()
+        # First-ever play press for this cycle -- create the opening
+        # focus session if one isn't already tracked (e.g. resumed
+        # from an existing incomplete session via on_pre_enter).
+        if not self.timer.is_break:
+            self._start_new_session()
         self.timer.start()
 
     def pause_timer(self):
