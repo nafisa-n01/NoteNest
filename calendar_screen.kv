@@ -1,0 +1,154 @@
+<CalendarScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        padding: dp(16)
+        spacing: dp(14)
+
+        # ── top row: back arrow + title/subtitle + add button ──
+        MDBoxLayout:
+            size_hint_y: None
+            height: dp(56)
+            spacing: dp(8)
+
+            MDIconButton:
+                id: back_button
+                icon: "arrow-left"
+                theme_icon_color: "Custom"
+                on_release: root.go_back()
+
+            MDBoxLayout:
+                orientation: "vertical"
+
+                MDLabel:
+                    id: title_label
+                    text: "Calendar"
+                    theme_text_color: "Custom"
+                    font_style: "Title"
+                    role: "medium"
+
+                MDLabel:
+                    id: subtitle_label
+                    text: "Tap a date to add a reminder"
+                    theme_text_color: "Custom"
+                    font_style: "Body"
+                    role: "small"
+
+            MDIconButton:
+                id: add_button
+                icon: "plus"
+                theme_icon_color: "Custom"
+                on_release: root.open_add_popup()
+
+        ScrollView:
+            do_scroll_x: False
+
+            MDBoxLayout:
+                orientation: "vertical"
+                spacing: dp(14)
+                adaptive_height: True
+
+                # ── month card ──
+                MDCard:
+                    id: month_card
+                    theme_bg_color: "Custom"
+                    orientation: "vertical"
+                    padding: dp(14)
+                    spacing: dp(8)
+                    adaptive_height: True
+                    radius: [18]
+
+                    # nav row: < Month Year  [Today]  >
+                    MDBoxLayout:
+                        size_hint_y: None
+                        height: dp(40)
+                        spacing: dp(6)
+
+                        MDIconButton:
+                            id: prev_button
+                            icon: "chevron-left"
+                            theme_icon_color: "Custom"
+                            on_release: root.prev_month()
+
+                        MDLabel:
+                            id: month_label
+                            text: ""
+                            theme_text_color: "Custom"
+                            font_style: "Title"
+                            role: "small"
+                            bold: True
+
+                        MDIconButton:
+                            id: today_button
+                            icon: "calendar-today"
+                            theme_icon_color: "Custom"
+                            on_release: root.go_to_today()
+
+                        MDIconButton:
+                            id: next_button
+                            icon: "chevron-right"
+                            theme_icon_color: "Custom"
+                            on_release: root.next_month()
+
+                    # weekday header row -- filled in from Python
+                    # (_build_weekday_header) since Mon..Sun labels need
+                    # per-theme colors just like every other label here.
+                    GridLayout:
+                        id: weekday_header
+                        cols: 7
+                        size_hint_y: None
+                        height: dp(20)
+
+                    # 6x7 date grid -- filled in from Python
+                    # (build_month_grid), one CalendarDayCell per date.
+                    GridLayout:
+                        id: day_grid
+                        cols: 7
+                        rows: 6
+                        size_hint_y: None
+                        height: dp(240)
+                        row_default_height: dp(40)
+                        row_force_default: True
+
+                # ── agenda card (selected day's reminders) ──
+                MDCard:
+                    id: agenda_card
+                    theme_bg_color: "Custom"
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(8)
+                    adaptive_height: True
+                    radius: [18]
+
+                    MDBoxLayout:
+                        size_hint_y: None
+                        height: dp(28)
+
+                        MDLabel:
+                            id: agenda_title
+                            text: ""
+                            theme_text_color: "Custom"
+                            font_style: "Title"
+                            role: "small"
+                            bold: True
+
+                        MDLabel:
+                            id: view_all_label
+                            text: ""
+                            theme_text_color: "Custom"
+                            font_style: "Body"
+                            role: "small"
+                            halign: "right"
+                            size_hint_x: None
+                            width: dp(1)
+
+                    # agenda_list is a plain BoxLayout -- Python adds/
+                    # removes EventRow widgets into it directly
+                    # (clear_widgets / add_widget), so it must stay a
+                    # simple adaptive-height container, not a ScrollView
+                    # itself (the outer ScrollView above already
+                    # handles scrolling for the whole page).
+                    MDBoxLayout:
+                        id: agenda_list
+                        orientation: "vertical"
+                        spacing: dp(4)
+                        adaptive_height: True

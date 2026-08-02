@@ -68,6 +68,7 @@ class HomeScreen(ThemedScreenMixin, MDScreen):
         "today_plan_card":   ("md_bg_color", CARD_PRIMARY),
         "next_up_label":     ("text_color", TEXT_PRIMARY),
         "todays_plan_label": ("text_color", TEXT_PRIMARY),
+        "checklist_label":   ("text_color", TEXT_PRIMARY),
     }
 
     def on_pre_enter(self, *args):
@@ -75,6 +76,7 @@ class HomeScreen(ThemedScreenMixin, MDScreen):
         self.set_greeting()
         self.refresh_stats()
         self.build_today_plan()
+        self.build_checklist_entry()
 
     def on_theme_applied(self):
         if hasattr(self.ids.up_next_tile, "apply_theme"):
@@ -251,6 +253,31 @@ class HomeScreen(ThemedScreenMixin, MDScreen):
             self.ids.up_next_tile.stat_number = ""
             self.ids.up_next_tile.stat_label = ""
             self._next_event_id = None
+
+    def build_checklist_entry(self):
+        """
+        Home's entry point into the Checklist feature -- one static
+        DashboardTile, same construction pattern already used for the
+        "Continue Studying" tile above: built in Python, on_release
+        assigned directly as an instance attribute, apply_theme()
+        called explicitly since it's created outside the normal
+        .kv-driven theming pass.
+        """
+        self.ids.checklist_container.clear_widgets()
+
+        tile = DashboardTile(
+            label="Checklist",
+            subtitle="Cross off your to-dos",
+            icon_name="checkbox-marked-outline",
+        )
+        tile.on_release = self.open_checklist
+        if hasattr(tile, "apply_theme"):
+            tile.apply_theme()
+
+        self.ids.checklist_container.add_widget(tile)
+
+    def open_checklist(self):
+        self.manager.current = "checklist"
     
     def open_study_session_popup(self):
         bg_color = get_color_from_hex(theme_manager.get_color(CARD_PRIMARY))

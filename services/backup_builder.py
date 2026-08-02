@@ -29,12 +29,22 @@ from models.category import Category
 from models.task import Task
 from models.reminder import Reminder
 
+from database.calendar_queries import get_all_events
+
 from screens.editor.paths import DEFAULT_NOTEBOOK_ID
 
 # The current manifest format version. Bump this only when the
 # structure of the "data" section below actually changes shape (a
 # field added/removed/renamed) -- not for every code change.
 SCHEMA_VERSION = 1
+
+# The current manifest format version. Bump this only when the
+# structure of the "data" section below actually changes shape (a
+# field added/removed/renamed) -- not for every code change.
+# v2: added "calendar_events" (date-based reminders from the
+# Calendar feature, separate from the existing task-linked
+# "reminders" list).
+SCHEMA_VERSION = 2
 
 # The app doesn't yet have real multi-user accounts (no
 # user_queries.py, no login screen) -- categories and tasks still
@@ -104,6 +114,11 @@ def _collect_reminders(tasks):
         reminders.extend(_reminder_to_dict(row) for row in rows)
     return reminders
 
+def _collect_calendar_events():
+    # calendar_queries.py already returns plain dicts (not raw tuples
+    # like task_queries/reminder_queries), so no model-mapping step
+    # is needed here -- just pass the list straight through.
+    return get_all_events(DEFAULT_USER_ID)
 
 def _collect_attachments(notes):
     # Same technique as _collect_reminders -- get_all_attachments()
@@ -146,20 +161,17 @@ def build_backup_manifest():
     categories = _collect_categories()
     tasks = _collect_tasks()
     reminders = _collect_reminders(tasks)
+    calendar_events = _collect_calendar_events()
     attachments = _collect_attachments(notes)
     trash = _collect_trash()
 
     data = {
-        # Intentionally empty for now -- there's no notebook_queries.py
-        # yet, and the app currently only ever uses one implicit
-        # default notebook (DEFAULT_NOTEBOOK_ID). Restoring always
-        # targets that same default, matching how notes are created
-        # today. Revisit once real notebook management exists.
         "notebooks": [],
         "categories": categories,
         "notes": notes,
         "tasks": tasks,
         "reminders": reminders,
+        "calendar_events": calendar_events,
         "attachments": attachments,
         "trash": trash,
     }

@@ -1,0 +1,79 @@
+#:kivy 2.3.1
+#
+# Main Checklist screen: list of checklist summary cards
+# (widgets/checklist_card.py, built in Python) plus a single
+# "+ New Checklist" button that opens the creation popup in
+# checklist_screen.py. Individual checklist items are NOT shown or
+# added here anymore -- tapping a card navigates to
+# checklist_detail_screen.kv for that.
+
+<ChecklistScreen>:
+
+    MDBoxLayout:
+        orientation: "vertical"
+        padding: dp(20)
+        spacing: dp(16)
+
+        # top bar: back + title/subtitle
+        MDBoxLayout:
+            id: top_bar
+            size_hint_y: None
+            height: dp(56)
+            spacing: dp(8)
+
+            MDIconButton:
+                id: back_button
+                icon: "arrow-left"
+                theme_icon_color: "Custom"
+                on_release: root.go_back()
+
+            MDBoxLayout:
+                orientation: "vertical"
+
+                MDLabel:
+                    id: header_label
+                    text: "Checklists"
+                    theme_text_color: "Custom"
+                    font_style: "Title"
+                    role: "medium"
+
+                MDLabel:
+                    id: subtitle_label
+                    text: "Tap a checklist to open it"
+                    theme_text_color: "Custom"
+                    font_style: "Body"
+                    role: "small"
+
+        # scrollable list of checklist cards -- filled by
+        # ChecklistScreen.load_checklists() in checklist_screen.py
+        ScrollView:
+            size_hint: 1, 1
+            do_scroll_x: False
+
+            MDBoxLayout:
+                id: checklist_list
+                orientation: "vertical"
+                spacing: dp(12)
+                size_hint_y: None
+                adaptive_height: True
+
+        # add bar: single full-width button that opens the
+        # "New Checklist" popup (title + optional category/priority)
+        MDCard:
+            id: add_bar
+            theme_bg_color: "Custom"
+            orientation: "horizontal"
+            size_hint_y: None
+            height: dp(56)
+            padding: dp(6)
+            radius: [16]
+            elevation: 1
+
+            MDButton:
+                id: add_button
+                style: "text"
+                size_hint_x: 1
+                on_release: root.open_new_checklist_popup()
+
+                MDButtonText:
+                    text: "+  New Checklist"

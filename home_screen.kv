@@ -232,6 +232,21 @@
                     subtitle: ""
                     icon_name: "calendar-clock-outline"
 
+                # ── Checklist quick-access tile ──
+                MDLabel:
+                    id: checklist_label
+                    text: "Checklist"
+                    theme_text_color: "Custom"
+                    font_style: "Title"
+                    role: "small"
+                    adaptive_height: True
+
+                MDBoxLayout:
+                    id: checklist_container
+                    orientation: "vertical"
+                    size_hint_y: None
+                    adaptive_height: True
+
                 # ── Today's Plan ──
                 MDLabel:
                     id: todays_plan_label

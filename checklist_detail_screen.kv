@@ -1,0 +1,100 @@
+#:kivy 2.3.1
+#
+# Detail screen for ONE checklist. Layout: header (back + tappable
+# title/priority + edit pencil), a static "Your Tasks" section label,
+# active items (with inline "+ Add another item" row at the bottom of
+# the list), and a collapsible "N Checked Items" section -- both
+# item_list and checked_section are filled entirely from Python
+# (checklist_detail_screen.py), since item rows are dynamic
+# ChecklistItem widgets with per-row delete buttons.
+
+<ChecklistDetailScreen>:
+
+    MDBoxLayout:
+        orientation: "vertical"
+        padding: dp(20)
+        spacing: dp(16)
+
+        # top bar: back + title/subtitle + edit icon
+        MDBoxLayout:
+            id: top_bar
+            size_hint_y: None
+            height: dp(56)
+            spacing: dp(8)
+
+            MDIconButton:
+                id: back_button
+                icon: "arrow-left"
+                theme_icon_color: "Custom"
+                on_release: root.go_back()
+
+            MDBoxLayout:
+                orientation: "vertical"
+
+                MDLabel:
+                    id: header_label
+                    text: ""
+                    theme_text_color: "Custom"
+                    font_style: "Title"
+                    role: "medium"
+                    shorten: True
+                    shorten_from: "right"
+
+                MDLabel:
+                    id: subtitle_label
+                    text: ""
+                    theme_text_color: "Custom"
+                    font_style: "Body"
+                    role: "small"
+
+            MDIconButton:
+                icon: "pencil-outline"
+                theme_icon_color: "Custom"
+                on_release: root.open_edit_checklist_popup()
+
+        ScrollView:
+            size_hint: 1, 1
+            do_scroll_x: False
+
+            MDBoxLayout:
+                id: content_column
+                orientation: "vertical"
+                spacing: dp(12)
+                size_hint_y: None
+                adaptive_height: True
+
+                MDLabel:
+                    id: section_label
+                    text: "Your Tasks"
+                    theme_text_color: "Custom"
+                    font_style: "Label"
+                    role: "large"
+                    bold: True
+                    adaptive_height: True
+
+                # active items + inline "add another item" row --
+                # filled by ChecklistDetailScreen.load_items()
+                MDBoxLayout:
+                    id: item_list
+                    orientation: "vertical"
+                    spacing: dp(10)
+                    size_hint_y: None
+                    adaptive_height: True
+
+                # thin divider before the checked-items section --
+                # only visually meaningful once checked_section has
+                # content, but a hairline here at all times reads
+                # fine as a soft section break either way
+                Widget:
+                    size_hint_y: None
+                    height: dp(1)
+
+                # collapsible "N Checked Items" header + list --
+                # filled by ChecklistDetailScreen.load_items(); empty
+                # (zero height) whenever there are no checked items
+                MDBoxLayout:
+                    id: checked_section
+                    orientation: "vertical"
+                    spacing: dp(8)
+                    size_hint_y: None
+                    adaptive_height: True
